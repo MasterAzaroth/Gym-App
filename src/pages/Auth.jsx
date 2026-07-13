@@ -129,7 +129,7 @@ function humanise(message = '') {
   if (m.includes('already registered')) return 'That email already has an account. Sign in instead.'
   if (m.includes('password')) return 'Passwords need at least 6 characters.'
   if (m.includes('invalid path') || m.includes('failed to fetch')) {
-    return 'Can’t reach the server. Check VITE_SUPABASE_URL has no trailing slash, then redeploy.'
+    return 'Can’t reach the server. VITE_SUPABASE_URL must be just https://your-project.supabase.co — no path after it.'
   }
   return message
 }
