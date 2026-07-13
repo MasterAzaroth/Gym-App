@@ -1,17 +1,19 @@
 import { NavLink } from 'react-router-dom'
 
+/* Left to right: Learning · Training · Insights · Nutrition · Profile.
+   Insights sits at the centre because it's the overview you glance at. */
 const TABS = [
-  { to: '/', label: 'Today', end: true, icon: IconToday },
-  { to: '/train', label: 'Train', icon: IconTrain },
-  { to: '/learn', label: 'Learn', icon: IconLearn },
-  { to: '/progress', label: 'Progress', icon: IconProgress },
-  { to: '/you', label: 'You', icon: IconYou }
+  { to: '/learn',     label: 'Learning',  icon: IconLearn },
+  { to: '/train',     label: 'Training',  icon: IconTrain },
+  { to: '/',          label: 'Insights',  icon: IconInsights, end: true },
+  { to: '/nutrition', label: 'Nutrition', icon: IconNutrition },
+  { to: '/profile',   label: 'Profile',   icon: IconProfile }
 ]
 
 export default function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/80 backdrop-blur-xl"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/85 backdrop-blur-xl"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >
@@ -44,18 +46,18 @@ const base = {
   strokeLinecap: 'round', strokeLinejoin: 'round'
 }
 
-function IconToday() {
-  return <svg {...base}><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v3.5M16 3v3.5M3 10h18"/></svg>
+function IconLearn() {
+  return <svg {...base}><path d="M12 6.5C10.8 5.2 9 4.5 6.5 4.5H4v14h2.5c2.5 0 4.3.7 5.5 2 1.2-1.3 3-2 5.5-2H20v-14h-2.5c-2.5 0-4.3.7-5.5 2z"/><path d="M12 6.5v13"/></svg>
 }
 function IconTrain() {
   return <svg {...base}><path d="M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10"/></svg>
 }
-function IconLearn() {
-  return <svg {...base}><path d="M12 6.5C10.8 5.2 9 4.5 6.5 4.5H4v14h2.5c2.5 0 4.3.7 5.5 2 1.2-1.3 3-2 5.5-2H20v-14h-2.5c-2.5 0-4.3.7-5.5 2z"/><path d="M12 6.5v13"/></svg>
-}
-function IconProgress() {
+function IconInsights() {
   return <svg {...base}><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4.5L15 14l4-6"/></svg>
 }
-function IconYou() {
+function IconNutrition() {
+  return <svg {...base}><path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/><path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/></svg>
+}
+function IconProfile() {
   return <svg {...base}><circle cx="12" cy="8" r="3.75"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
 }

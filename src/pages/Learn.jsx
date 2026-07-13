@@ -18,14 +18,14 @@ export default function Learn() {
 
   return (
     <>
-      <PageTitle eyebrow="Curriculum">Learn</PageTitle>
+      <PageTitle eyebrow="Curriculum">Learning</PageTitle>
 
       <ul className="space-y-3">
         {MODULES.map((m) => {
           const locked = RANK[m.tier] > unlocked
           return (
             <li key={m.n}>
-              <Card className={`flex items-center gap-4 ${locked ? 'opacity-55' : ''}`}>
+              <Card className={`flex items-center gap-4 p-5 ${locked ? 'opacity-55' : ''}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-soft text-[15px] font-semibold text-violet tnum">
                   {m.n}
                 </span>
@@ -44,7 +44,7 @@ export default function Learn() {
         })}
       </ul>
 
-      <Stub note="Module titles are placeholders for your outline. Lesson bodies will render from a Supabase lessons table." />
+      <Stub note="Module titles are placeholders until you send me your outline. Lesson bodies will come from a Supabase lessons table." />
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, isConfigured } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -9,39 +9,25 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isConfigured) {
-      setLoading(false)
-      return
-    }
+    if (!isConfigured) { setLoading(false); return }
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s)
-    })
-
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (!session?.user || !isConfigured) {
-      setProfile(null)
-      return
-    }
-    let cancelled = false
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setProfile(data)
-      })
-    return () => { cancelled = true }
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user || !isConfigured) return setProfile(null)
+    const { data } = await supabase
+      .from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+    setProfile(data)
   }, [session?.user?.id])
+
+  useEffect(() => { refreshProfile() }, [refreshProfile])
 
   const value = {
     session,
@@ -50,10 +36,9 @@ export function AuthProvider({ children }) {
     tier: profile?.tier ?? 'free',
     loading,
     isConfigured,
-    signUp: (email, password) =>
-      supabase.auth.signUp({ email, password }),
-    signIn: (email, password) =>
-      supabase.auth.signInWithPassword({ email, password }),
+    refreshProfile,
+    signUp: (email, password) => supabase.auth.signUp({ email, password }),
+    signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signOut: () => supabase.auth.signOut()
   }
 

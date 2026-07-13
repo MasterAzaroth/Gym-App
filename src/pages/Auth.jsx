@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Button, Field, FieldGroup, Logo } from '../components/ui'
+import { Button, Field, Group, Logo } from '../components/ui'
 
 export default function Auth() {
   const { signIn, signUp, isConfigured } = useAuth()
@@ -69,7 +69,7 @@ export default function Auth() {
             </p>
           </div>
 
-          <FieldGroup>
+          <Group>
             <Field
               label="Email"
               type="email"
@@ -90,7 +90,7 @@ export default function Auth() {
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
             />
-          </FieldGroup>
+          </Group>
 
           {error && (
             <p className="mt-3 px-1 text-[13px] leading-relaxed text-danger">{error}</p>
