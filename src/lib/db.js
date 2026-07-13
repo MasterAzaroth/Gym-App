@@ -60,11 +60,14 @@ export async function getRoutine(routineId) {
   guard()
   const { data, error } = await supabase
     .from('routines')
-    .select('*, routine_exercises(*, exercise:exercises(*))')
+    .select('*, routine_exercises(*, exercise:exercises(*), routine_sets(*))')
     .eq('id', routineId)
     .single()
   if (error) throw error
   data.routine_exercises?.sort((a, b) => a.position - b.position)
+  for (const re of data.routine_exercises ?? []) {
+    re.routine_sets?.sort((a, b) => a.set_index - b.set_index)
+  }
   return data
 }
 
@@ -95,6 +98,44 @@ export async function addRoutineExercise(routineId, exerciseId, position) {
     .insert({ routine_id: routineId, exercise_id: exerciseId, position })
     .select('*, exercise:exercises(*)')
     .single()
+  if (error) throw error
+
+  // A new exercise with no sets is useless. Start it with three working sets;
+  // the user edits from there rather than starting at zero.
+  await replaceRoutineSets(data.id, [
+    { set_index: 0, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+    { set_index: 1, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+    { set_index: 2, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
+  ])
+
+  return data
+}
+
+/**
+ * Swap an exercise's planned sets wholesale. Simpler and safer than diffing:
+ * the sheet edits a local array, then commits it in one go.
+ */
+export async function replaceRoutineSets(routineExerciseId, rows) {
+  guard()
+  const { error: delError } = await supabase
+    .from('routine_sets').delete().eq('routine_exercise_id', routineExerciseId)
+  if (delError) throw delError
+
+  if (!rows.length) return []
+
+  const payload = rows.map((r, i) => ({
+    routine_exercise_id: routineExerciseId,
+    set_index:        i,
+    rep_low:          Number(r.rep_low) || 1,
+    rep_high:         Number(r.rep_high) || 1,
+    rest_seconds:     Number(r.rest_seconds) || 0,
+    is_warmup:        Boolean(r.is_warmup),
+    target_weight_kg: r.target_weight_kg === '' || r.target_weight_kg == null
+      ? null
+      : Number(r.target_weight_kg)
+  }))
+
+  const { data, error } = await supabase.from('routine_sets').insert(payload).select()
   if (error) throw error
   return data
 }
