@@ -11,7 +11,7 @@ const TABS = [
 export default function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-iron/10 bg-paper/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/80 backdrop-blur-xl"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >
@@ -23,17 +23,13 @@ export default function BottomNav() {
               end={end}
               className={({ isActive }) =>
                 [
-                  'flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold uppercase tracking-wide transition-colors',
-                  isActive ? 'text-plate-red' : 'text-steel hover:text-iron'
+                  'flex flex-col items-center gap-[3px] pb-1.5 pt-2 text-[10px] font-medium transition-colors',
+                  isActive ? 'text-violet' : 'text-label3'
                 ].join(' ')
               }
             >
-              {({ isActive }) => (
-                <>
-                  <Icon active={isActive} />
-                  {label}
-                </>
-              )}
+              <Icon />
+              {label}
             </NavLink>
           </li>
         ))}
@@ -42,32 +38,24 @@ export default function BottomNav() {
   )
 }
 
-/* Icons are inline SVG so there's no icon-library dependency to keep in sync. */
-const base = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+const base = {
+  width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', strokeWidth: 1.7,
+  strokeLinecap: 'round', strokeLinejoin: 'round'
+}
 
 function IconToday() {
-  return (
-    <svg {...base} stroke="currentColor"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
-  )
+  return <svg {...base}><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v3.5M16 3v3.5M3 10h18"/></svg>
 }
 function IconTrain() {
-  // A barbell — the app's own vernacular
-  return (
-    <svg {...base} stroke="currentColor"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>
-  )
+  return <svg {...base}><path d="M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10"/></svg>
 }
 function IconLearn() {
-  return (
-    <svg {...base} stroke="currentColor"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
-  )
+  return <svg {...base}><path d="M12 6.5C10.8 5.2 9 4.5 6.5 4.5H4v14h2.5c2.5 0 4.3.7 5.5 2 1.2-1.3 3-2 5.5-2H20v-14h-2.5c-2.5 0-4.3.7-5.5 2z"/><path d="M12 6.5v13"/></svg>
 }
 function IconProgress() {
-  return (
-    <svg {...base} stroke="currentColor"><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4.5L15 14l4-6"/></svg>
-  )
+  return <svg {...base}><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4.5L15 14l4-6"/></svg>
 }
 function IconYou() {
-  return (
-    <svg {...base} stroke="currentColor"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-  )
+  return <svg {...base}><circle cx="12" cy="8" r="3.75"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
 }

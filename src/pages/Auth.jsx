@@ -1,85 +1,135 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Button, Field } from '../components/ui'
-import PlateStrip from '../components/PlateStrip'
+import { Button, Field, FieldGroup, Logo } from '../components/ui'
 
 export default function Auth() {
   const { signIn, signUp, isConfigured } = useAuth()
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [status, setStatus] = useState(null)
+  const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  const isSignIn = mode === 'signin'
+  const canSubmit = email.includes('@') && password.length >= 6 && !busy
 
   async function handleSubmit() {
     if (!isConfigured) {
-      setStatus('Add your Supabase keys in .env.local first.')
+      setError('Supabase keys are missing. Add them and redeploy.')
       return
     }
     setBusy(true)
-    setStatus(null)
-    const fn = mode === 'signin' ? signIn : signUp
-    const { error } = await fn(email, password)
+    setError(null)
+    setNotice(null)
+
+    const { error: err } = isSignIn
+      ? await signIn(email.trim(), password)
+      : await signUp(email.trim(), password)
+
     setBusy(false)
-    if (error) setStatus(error.message)
-    else if (mode === 'signup') setStatus('Account created. Check your email if confirmation is on.')
+
+    // Errors say what happened and what to do. They don't apologise.
+    if (err) {
+      setError(humanise(err.message))
+      return
+    }
+    if (!isSignIn) {
+      setNotice('Account created. You can sign in now.')
+    }
+  }
+
+  function switchMode() {
+    setMode(isSignIn ? 'signup' : 'signin')
+    setError(null)
+    setNotice(null)
   }
 
   return (
     <div
-      className="flex min-h-full flex-col justify-center bg-iron px-6"
-      style={{ paddingTop: 'env(safe-area-inset-top,0px)', paddingBottom: 'env(safe-area-inset-bottom,0px)' }}
+      className="flex min-h-full flex-col bg-fill px-6"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)'
+      }}
     >
-      <div className="mx-auto w-full max-w-sm">
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-plate-yellow">
-          Hypertrophy, logged
-        </p>
-        <h1 className="mt-2 font-display text-5xl uppercase leading-[0.9] tracking-tight text-chalk">
-          Iron<br />log
-        </h1>
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col">
+        <div className="flex flex-1 flex-col justify-center">
+          <div className="mb-10 text-center">
+            <div className="mx-auto mb-5 w-fit">
+              <Logo size={56} />
+            </div>
+            <h1 className="text-[28px] font-bold tracking-[-0.02em] text-label">
+              {isSignIn ? 'Welcome back' : 'Create your account'}
+            </h1>
+            <p className="mx-auto mt-2 max-w-[30ch] text-[15px] leading-relaxed text-label2">
+              {isSignIn
+                ? 'Sign in to pick up where your last session left off.'
+                : 'Track every set, follow the lessons, and watch the numbers move.'}
+            </p>
+          </div>
 
-        <div className="mt-6 rounded-lg bg-graphite/60 p-3">
-          <PlateStrip weightKg={100} />
-        </div>
+          <FieldGroup>
+            <Field
+              label="Email"
+              type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Field
+              label="Password"
+              type="password"
+              autoComplete={isSignIn ? 'current-password' : 'new-password'}
+              placeholder={isSignIn ? 'Your password' : '6 characters or more'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
+            />
+          </FieldGroup>
 
-        <div className="mt-8 space-y-4 rounded-xl bg-paper p-5">
-          <Field
-            label="Email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-          />
-          <Field
-            label="Password"
-            type="password"
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-          />
-
-          {status && (
-            <p className="font-mono text-xs leading-relaxed text-plate-red">{status}</p>
+          {error && (
+            <p className="mt-3 px-1 text-[13px] leading-relaxed text-danger">{error}</p>
+          )}
+          {notice && (
+            <p className="mt-3 px-1 text-[13px] leading-relaxed text-violet">{notice}</p>
           )}
 
-          <Button onClick={handleSubmit} disabled={busy || !email || !password}>
-            {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-          </Button>
+          <div className="mt-5">
+            <Button onClick={handleSubmit} disabled={!canSubmit}>
+              {busy ? 'One moment…' : isSignIn ? 'Sign in' : 'Create account'}
+            </Button>
+          </div>
 
           <button
             type="button"
-            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setStatus(null) }}
-            className="w-full text-center text-xs font-medium text-steel underline underline-offset-4"
+            onClick={switchMode}
+            className="mt-5 w-full text-center text-[15px] font-medium text-violet"
           >
-            {mode === 'signin'
-              ? 'No account yet? Create one'
-              : 'Already have an account? Sign in'}
+            {isSignIn ? 'Create an account' : 'I already have an account'}
           </button>
         </div>
+
+        <p className="mt-10 text-center text-[13px] text-label3">
+          By continuing you agree to the terms and privacy policy.
+        </p>
       </div>
     </div>
   )
+}
+
+/* Supabase's raw messages are written for developers. Rewrite them for lifters. */
+function humanise(message = '') {
+  const m = message.toLowerCase()
+  if (m.includes('invalid login')) return 'That email and password don’t match. Try again.'
+  if (m.includes('already registered')) return 'That email already has an account. Sign in instead.'
+  if (m.includes('password')) return 'Passwords need at least 6 characters.'
+  if (m.includes('invalid path') || m.includes('failed to fetch')) {
+    return 'Can’t reach the server. Check VITE_SUPABASE_URL has no trailing slash, then redeploy.'
+  }
+  return message
 }

@@ -5,9 +5,11 @@
 html, body, #root { height: 100%; }
 
 body {
-  @apply bg-chalk text-iron antialiased;
+  @apply bg-fill text-label antialiased;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  /* Apple sets type tight and dark. Both matter more than any other single choice. */
+  letter-spacing: -0.011em;
 }
 
 .tnum { font-variant-numeric: tabular-nums; }
@@ -20,6 +22,6 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid #C8102E;
+  outline: 2px solid #6E56CF;
   outline-offset: 2px;
 }

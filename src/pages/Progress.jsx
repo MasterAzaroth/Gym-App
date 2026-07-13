@@ -1,6 +1,5 @@
-import { PageTitle, Empty, Stub } from '../components/ui'
 import { Link } from 'react-router-dom'
-import { Button } from '../components/ui'
+import { PageTitle, Empty, Button, Stub } from '../components/ui'
 
 export default function Progress() {
   return (
@@ -9,7 +8,7 @@ export default function Progress() {
 
       <Empty
         title="Nothing logged yet"
-        body="Charts appear once you've finished a session. Two sessions gives you a trend."
+        body="Charts appear after your first session. Two sessions gives you a trend."
         action={<Link to="/train"><Button>Log your first session</Button></Link>}
       />
 

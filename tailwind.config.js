@@ -4,27 +4,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        iron: '#17191C',
-        graphite: '#2C3036',
-        steel: '#4A5058',
-        chalk: '#E9EAEC',
-        paper: '#FAFAF9',
-        // IWF competition plate colours — used to encode data, not decorate
-        plate: {
-          red: '#C8102E',    // 25 kg
-          blue: '#0B5FA5',   // 20 kg
-          yellow: '#E8B10E', // 15 kg
-          green: '#1E7A45',  // 10 kg
-          white: '#D8D8D4'   //  5 kg
-        }
+        // iOS greyscale
+        label: '#1C1C1E',        // primary text
+        label2: '#6E6E73',       // secondary text
+        label3: '#AEAEB2',       // tertiary / placeholder
+        separator: '#E5E5EA',
+        fill: '#F2F2F7',         // grouped background
+        surface: '#FFFFFF',      // card
+        // Accent
+        violet: {
+          DEFAULT: '#6E56CF',
+          hover: '#5F48BC',
+          soft: '#F1EDFC'
+        },
+        danger: '#D93843'
       },
       fontFamily: {
-        display: ['"Archivo Black"', 'system-ui', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+        sans: [
+          '-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"',
+          'Inter', 'system-ui', 'sans-serif'
+        ],
+        mono: ['"SF Mono"', 'ui-monospace', 'monospace']
+      },
+      borderRadius: {
+        xl: '14px',
+        '2xl': '18px',
+        '3xl': '24px'
       },
       boxShadow: {
-        card: '0 1px 2px rgba(23,25,28,0.06), 0 8px 24px -12px rgba(23,25,28,0.18)'
+        card: '0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -16px rgba(0,0,0,0.12)'
       }
     }
   },

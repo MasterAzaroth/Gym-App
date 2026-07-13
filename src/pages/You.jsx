@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext'
 import { PageTitle, Card, Button, Stub } from '../components/ui'
 
 const TIERS = [
-  { id: 'free',    name: 'Free',    price: '€0',     lines: ['Full workout log', 'Modules 01–02'] },
+  { id: 'free',    name: 'Free',    price: '€0',     lines: ['Full workout log', 'Modules 1–2'] },
   { id: 'plus',    name: 'Plus',    price: '€9/mo',  lines: ['Everything in Free', 'All lessons', 'Progress charts'] },
   { id: 'coached', name: 'Coached', price: '€39/mo', lines: ['Everything in Plus', '15-min check-in each month', 'Programme review'] }
 ]
@@ -19,23 +19,25 @@ export default function You() {
           const current = t.id === tier
           return (
             <li key={t.id}>
-              <Card className={current ? 'border-plate-red/60 ring-1 ring-plate-red/30' : ''}>
+              <Card className={current ? 'ring-2 ring-violet' : ''}>
                 <div className="flex items-baseline justify-between">
-                  <h2 className="font-display text-lg uppercase tracking-tight">{t.name}</h2>
-                  <span className="font-mono text-sm font-bold tnum">{t.price}</span>
+                  <h2 className="text-[20px] font-semibold tracking-[-0.02em]">{t.name}</h2>
+                  <span className="text-[17px] font-semibold tnum text-label2">{t.price}</span>
                 </div>
-                <ul className="mt-2 space-y-1 text-sm text-steel">
-                  {t.lines.map((l) => <li key={l}>· {l}</li>)}
+                <ul className="mt-2.5 space-y-1.5">
+                  {t.lines.map((l) => (
+                    <li key={l} className="flex gap-2 text-[15px] text-label2">
+                      <span className="text-violet">✓</span>{l}
+                    </li>
+                  ))}
                 </ul>
-                {current ? (
-                  <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-plate-red">
-                    Your plan
-                  </p>
-                ) : (
-                  <div className="mt-3">
-                    <Button variant="dark" disabled>Choose {t.name}</Button>
-                  </div>
-                )}
+                <div className="mt-4">
+                  {current ? (
+                    <p className="text-center text-[13px] font-medium text-violet">Your current plan</p>
+                  ) : (
+                    <Button variant="secondary" disabled>Choose {t.name}</Button>
+                  )}
+                </div>
               </Card>
             </li>
           )
@@ -46,7 +48,7 @@ export default function You() {
         <Button variant="ghost" onClick={signOut}>Sign out</Button>
       </div>
 
-      <Stub note="Tiers are read from profiles.tier. Checkout wires to Stripe later; check-in booking wires to Cal.com." />
+      <Stub note="Tiers read from profiles.tier. Checkout wires to Stripe later; check-in booking to Cal.com." />
     </>
   )
 }
