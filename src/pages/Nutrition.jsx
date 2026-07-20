@@ -8,7 +8,7 @@ import {
 } from '../lib/db'
 import {
   scaleFood, sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS,
-  formatTime, nowTime, shortTime, DEFAULT_DAY_START, DEFAULT_DAY_END
+  formatTime, nowTime, shortTime, hourOf, formatHour, DEFAULT_DAY_START, DEFAULT_DAY_END
 } from '../lib/nutrition'
 
 export default function Nutrition() {
@@ -18,7 +18,7 @@ export default function Nutrition() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [addingOpen, setAddingOpen] = useState(false)
+  const [addAt, setAddAt] = useState(null)       // "HH:MM" of the hour row that was tapped
   const [editing, setEditing] = useState(null)   // entry being edited
 
   const iso = toISODate(date)
@@ -51,6 +51,20 @@ export default function Nutrition() {
 
   const totals = useMemo(() => sumEntries(entries), [entries])
   const weekDates = useMemo(() => getWeekDates(date), [date])
+
+  // One row per hour of the day window, MacroFactor-style, instead of fixed
+  // breakfast/lunch/dinner/snack buckets.
+  const hours = useMemo(() => {
+    const arr = []
+    for (let h = hourOf(dayStart); h <= hourOf(dayEnd); h++) arr.push(h)
+    return arr
+  }, [dayStart, dayEnd])
+
+  const entriesByHour = useMemo(() => {
+    const map = {}
+    for (const e of entries) (map[hourOf(e.logged_time)] ??= []).push(e)
+    return map
+  }, [entries])
 
   return (
     <>
@@ -101,7 +115,7 @@ export default function Nutrition() {
       {loading && <Spinner />}
       {error && <ErrorNote error={error} onRetry={load} />}
 
-      {/* Food log — one chronological list across the user's day window,
+      {/* Food log — an hour-by-hour timeline across the user's day window,
           instead of fixed breakfast/lunch/dinner/snack sections. */}
       {!loading && !error && (
         <section className="mb-5">
@@ -115,33 +129,28 @@ export default function Nutrition() {
           </div>
 
           <Group>
-            {entries.map((e) => (
-              <Row
-                key={e.id}
-                label={e.name}
-                sub={`${formatTime(e.logged_time)} · ${Math.round(e.grams)} g · P ${e.protein_g} · C ${e.carbs_g} · F ${e.fat_g}`}
-                value={`${Math.round(e.kcal)}`}
-                onClick={() => setEditing(e)}
+            {hours.map((h) => (
+              <HourRow
+                key={h}
+                hour={h}
+                entries={entriesByHour[h] ?? []}
+                onAdd={() => setAddAt(`${String(h).padStart(2, '0')}:00`)}
+                onEdit={setEditing}
               />
             ))}
-            <button
-              onClick={() => setAddingOpen(true)}
-              className="flex w-full items-center gap-2 px-4 py-3.5 text-left text-[17px] text-violet transition-colors hover:bg-fill"
-            >
-              <span className="text-[20px] leading-none">+</span> Add food
-            </button>
           </Group>
         </section>
       )}
 
       <AddSheet
-        open={addingOpen}
+        open={Boolean(addAt)}
+        presetTime={addAt}
         userId={user?.id}
         isoDate={iso}
         dayStart={dayStart}
         dayEnd={dayEnd}
-        onClose={() => setAddingOpen(false)}
-        onSaved={() => { setAddingOpen(false); load() }}
+        onClose={() => setAddAt(null)}
+        onSaved={() => { setAddAt(null); load() }}
       />
 
       <EditSheet
@@ -175,9 +184,50 @@ function defaultLoggedTime(dayStart, dayEnd) {
   return now >= dayStart && now <= dayEnd ? now : dayStart
 }
 
+/** One hour of the timeline: the hour label, a separator line (from the
+    parent Group's divide-y), any entries logged in that hour, and a plus to
+    add one right there. */
+function HourRow({ hour, entries, onAdd, onEdit }) {
+  return (
+    <div className="flex gap-3 px-4 py-3">
+      <span className="w-11 shrink-0 pt-1.5 text-[12px] font-medium text-label3 tnum">
+        {formatHour(hour)}
+      </span>
+
+      <div className="min-w-0 flex-1 space-y-1.5">
+        {entries.map((e) => (
+          <button
+            key={e.id}
+            onClick={() => onEdit(e)}
+            className="flex w-full items-center gap-2 rounded-lg bg-fill px-2.5 py-2 text-left transition-colors hover:bg-separator/60"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px]">{e.name}</p>
+              <p className="mt-0.5 truncate text-[12px] text-label2 tnum">
+                {formatTime(e.logged_time)} · P {e.protein_g} · C {e.carbs_g} · F {e.fat_g}
+              </p>
+            </div>
+            <span className="shrink-0 text-[15px] text-label2 tnum">{Math.round(e.kcal)}</span>
+          </button>
+        ))}
+
+        <button
+          onClick={onAdd}
+          className="flex items-center gap-1.5 py-1 text-[13px] font-medium text-violet"
+        >
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-soft text-[13px] leading-none">
+            +
+          </span>
+          Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ---------------------------------------------------------------- add sheet */
 
-function AddSheet({ open, userId, isoDate, dayStart, dayEnd, onClose, onSaved }) {
+function AddSheet({ open, presetTime, userId, isoDate, dayStart, dayEnd, onClose, onSaved }) {
   const [query, setQuery] = useState('')
   const [foods, setFoods] = useState([])
   const [loading, setLoading] = useState(false)
@@ -193,7 +243,7 @@ function AddSheet({ open, userId, isoDate, dayStart, dayEnd, onClose, onSaved })
     setPicked(null)
     setQuery('')
     setError(null)
-    setLoggedTime(defaultLoggedTime(dayStart, dayEnd))
+    setLoggedTime(presetTime || defaultLoggedTime(dayStart, dayEnd))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 

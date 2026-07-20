@@ -47,6 +47,18 @@ export function nowTime() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+/** The hour (0–23) a "HH:MM[:SS]" string falls in. */
+export function hourOf(t) {
+  return t ? Number(shortTime(t).slice(0, 2)) : 0
+}
+
+/** Hour number -> "6 AM" / "11 PM", localized, no minutes. */
+export function formatHour(h) {
+  const d = new Date()
+  d.setHours(h, 0, 0, 0)
+  return d.toLocaleTimeString(undefined, { hour: 'numeric' })
+}
+
 /** Local YYYY-MM-DD. Never toISOString() here — it shifts to UTC and files your
     late dinner under tomorrow. */
 export function toISODate(date) {
