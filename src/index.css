@@ -9,6 +9,13 @@ html { background-color: #F2F2F7; }
 
 body {
   @apply bg-fill text-label antialiased;
+  /* The document itself must never scroll — only <main> does (see .app-shell
+     below). Without this, iOS rubber-bands the whole page on overscroll,
+     which drags the bottom nav along with it and leaves a gap under it. */
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   letter-spacing: -0.011em;
 }

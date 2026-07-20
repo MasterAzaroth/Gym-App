@@ -14,7 +14,11 @@ export default function AppShell() {
     <div className="app-shell flex flex-col bg-fill">
       <SetupBanner />
 
-      <main ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+      <main
+        ref={scroller}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         <div
           className="mx-auto max-w-md px-5 pb-6"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
