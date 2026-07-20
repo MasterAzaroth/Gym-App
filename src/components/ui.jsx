@@ -195,17 +195,21 @@ export function Sheet({ open, onClose, title, children, footer }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div
-        className="absolute inset-0 bg-label/30 backdrop-blur-[2px]"
+        className="backdrop-enter absolute inset-0 bg-label/30 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative mx-auto flex max-h-[88vh] w-full max-w-md flex-col rounded-t-3xl bg-fill"
+        className="sheet-enter relative mx-auto flex max-h-[88vh] w-full max-w-md flex-col rounded-t-3xl bg-fill"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-5 pb-2 pt-4">
+        {/* Grabber. Signals "this drags away" even though it dismisses by tap. */}
+        <div className="flex justify-center pt-2.5">
+          <div className="h-1 w-9 rounded-full bg-separator" />
+        </div>
+        <div className="flex items-center justify-between px-5 pb-2 pt-2">
           <button onClick={onClose} className="text-[17px] text-violet">Cancel</button>
           <h2 className="text-[17px] font-semibold">{title}</h2>
           <span className="w-[54px]" />

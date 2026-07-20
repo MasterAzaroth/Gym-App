@@ -2,26 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* The tab bar's real height, in one place. The bar sets its own row height
+     here and the page reads it for bottom padding, so content can never be
+     clipped by a bar of the wrong assumed size. */
+  --nav-row: 52px;
+  --nav-h: calc(var(--nav-row) + env(safe-area-inset-bottom, 0px));
+}
+
 html, body, #root { height: 100%; }
+
+html {
+  /* Paint the overscroll area the same colour as the page, or iOS shows white
+     behind the bar when you rubber-band. */
+  background-color: #F2F2F7;
+}
 
 body {
   @apply bg-fill text-label antialiased;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
-  /* Apple sets type tight and dark. Both matter more than any other single choice. */
   letter-spacing: -0.011em;
 }
 
 .tnum { font-variant-numeric: tabular-nums; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 :focus-visible {
   outline: 2px solid #6E56CF;
   outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- page transition
+   Content rises a few pixels and fades in. Short enough that it reads as
+   responsiveness rather than animation — anything longer starts to feel like
+   waiting. */
+@keyframes page-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.page-enter {
+  animation: page-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Sheets slide up from the bottom edge. */
+@keyframes sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet-enter    { animation: sheet-in 320ms cubic-bezier(0.32, 0.72, 0, 1); }
+.backdrop-enter { animation: backdrop-in 240ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -13,7 +13,7 @@ export default defineConfig({
         short_name: 'IRONLOG',
         description: 'A hypertrophy training log and coaching platform.',
         theme_color: '#F2F2F7',
-        background_color: '#FFFFFF',
+        background_color: '#F2F2F7',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
