@@ -1,9 +1,0 @@
-These files are replaced and must be deleted from your project:
-
-  src/pages/Today.jsx
-  src/pages/Progress.jsx
-  src/pages/You.jsx
-  src/pages/Train.jsx
-
-Windows:
-  del src\pages\Today.jsx src\pages\Progress.jsx src\pages\You.jsx src\pages\Train.jsx

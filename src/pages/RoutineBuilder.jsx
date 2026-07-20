@@ -16,6 +16,7 @@ export default function RoutineBuilder() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pendingExercise, setPendingExercise] = useState(null) // picked, not yet added
   const [editing, setEditing] = useState(null)
 
   const load = useCallback(async () => {
@@ -31,14 +32,6 @@ export default function RoutineBuilder() {
   }, [id])
 
   useEffect(() => { load() }, [load])
-
-  async function handleAdd(exercise) {
-    try {
-      await addRoutineExercise(id, exercise.id, routine.routine_exercises?.length ?? 0)
-      setPickerOpen(false)
-      load()
-    } catch (e) { setError(e.message) }
-  }
 
   async function handleRemove(reId, name) {
     if (!confirm(`Remove ${name} from this routine?`)) return
@@ -94,13 +87,26 @@ export default function RoutineBuilder() {
       <ExercisePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onPick={handleAdd}
+        onPick={(exercise) => { setPickerOpen(false); setPendingExercise(exercise) }}
       />
 
+      {/* One sheet, two purposes: confirming sets for a just-picked exercise
+          before it's added, or editing an existing one's sets. Never both at
+          once, so they can share the same instance. */}
       <SetsSheet
-        item={editing}
-        onClose={() => setEditing(null)}
-        onSaved={() => { setEditing(null); load() }}
+        open={Boolean(pendingExercise) || Boolean(editing)}
+        title={pendingExercise?.name ?? editing?.exercise?.name}
+        initialRows={pendingExercise ? DEFAULT_SETS : editing?.routine_sets}
+        confirmVerb={pendingExercise ? 'Add' : 'Save'}
+        onClose={() => { setPendingExercise(null); setEditing(null) }}
+        onSave={async (rows) => {
+          if (pendingExercise) {
+            await addRoutineExercise(id, pendingExercise.id, items.length, rows)
+          } else {
+            await replaceRoutineSets(editing.id, rows)
+          }
+        }}
+        onSaved={() => { setPendingExercise(null); setEditing(null); load() }}
       />
     </>
   )
@@ -173,33 +179,54 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
 
 /* --------------------------------------------------------------- sets sheet */
 
-function SetsSheet({ item, onClose, onSaved }) {
+/** Starting point when confirming a freshly-picked exercise — the user tunes
+    this before it's ever written anywhere. */
+const DEFAULT_SETS = [
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
+]
+
+/**
+ * Doubles as the "confirm sets before adding" step and the "edit sets" sheet
+ * for an exercise already in the routine — the caller decides what onSave
+ * does (create vs. replace) and hands over the rows to start from.
+ */
+function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, onSave, onSaved }) {
   const [rows, setRows] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!item) return
-    const existing = item.routine_sets ?? []
-    setRows(
-      existing.length
-        ? existing.map((s) => ({ ...s }))
-        : [{ rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }]
-    )
+    if (!open) return
+    const existing = initialRows?.length ? initialRows : DEFAULT_SETS
+    setRows(existing.map((s) => ({ ...s })))
     setError(null)
-  }, [item])
+    // Rows are seeded once, right when the sheet opens — not kept in sync
+    // with initialRows afterwards, since the caller doesn't change targets
+    // while it's open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const update = (i, key, value) =>
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [key]: value } : r)))
 
   const addSet = (warmup = false) =>
     setRows((rs) => {
+      if (warmup) {
+        // Warm-ups lead into working sets, so a new one joins the end of the
+        // warm-up block rather than tacking onto the very end of the list.
+        const firstWorking = rs.findIndex((r) => !r.is_warmup)
+        const row = { rep_low: 5, rep_high: 5, rest_seconds: 60, is_warmup: true }
+        if (firstWorking === -1) return [...rs, row]
+        return [...rs.slice(0, firstWorking), row, ...rs.slice(firstWorking)]
+      }
       const last = rs[rs.length - 1]
       return [...rs, {
-        rep_low:      warmup ? 5 : last?.rep_low ?? 8,
-        rep_high:     warmup ? 5 : last?.rep_high ?? 12,
-        rest_seconds: warmup ? 60 : last?.rest_seconds ?? 120,
-        is_warmup:    warmup
+        rep_low:      last?.rep_low ?? 8,
+        rep_high:     last?.rep_high ?? 12,
+        rest_seconds: last?.rest_seconds ?? 120,
+        is_warmup:    false
       }]
     })
 
@@ -222,7 +249,7 @@ function SetsSheet({ item, onClose, onSaved }) {
     setSaving(true)
     setError(null)
     try {
-      await replaceRoutineSets(item.id, rows)
+      await onSave(rows)
       onSaved()
     } catch (e) {
       setError(e.message)
@@ -234,12 +261,12 @@ function SetsSheet({ item, onClose, onSaved }) {
 
   return (
     <Sheet
-      open={Boolean(item)}
+      open={open}
       onClose={onClose}
-      title={item?.exercise?.name ?? 'Exercise'}
+      title={title ?? 'Exercise'}
       footer={
         <Button onClick={save} disabled={saving || rows.length === 0}>
-          {saving ? 'Saving…' : `Save ${workingCount} working ${workingCount === 1 ? 'set' : 'sets'}`}
+          {saving ? 'Saving…' : `${confirmVerb} ${workingCount} working ${workingCount === 1 ? 'set' : 'sets'}`}
         </Button>
       }
     >

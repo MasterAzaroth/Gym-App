@@ -91,7 +91,7 @@ export async function deleteRoutine(routineId) {
   if (error) throw error
 }
 
-export async function addRoutineExercise(routineId, exerciseId, position) {
+export async function addRoutineExercise(routineId, exerciseId, position, sets) {
   guard()
   const { data, error } = await supabase
     .from('routine_exercises')
@@ -100,12 +100,13 @@ export async function addRoutineExercise(routineId, exerciseId, position) {
     .single()
   if (error) throw error
 
-  // A new exercise with no sets is useless. Start it with three working sets;
-  // the user edits from there rather than starting at zero.
-  await replaceRoutineSets(data.id, [
-    { set_index: 0, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-    { set_index: 1, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-    { set_index: 2, rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
+  // Sets come from the confirm step the user just went through — see
+  // RoutineBuilder's SetsSheet. Fall back to a plain default only if a caller
+  // skips that step.
+  await replaceRoutineSets(data.id, sets ?? [
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
   ])
 
   return data
