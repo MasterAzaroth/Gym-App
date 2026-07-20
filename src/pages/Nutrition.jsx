@@ -128,7 +128,7 @@ export default function Nutrition() {
             </span>
           </div>
 
-          <Group>
+          <div className="divide-y divide-separator px-1">
             {hours.map((h) => (
               <HourRow
                 key={h}
@@ -138,7 +138,7 @@ export default function Nutrition() {
                 onEdit={setEditing}
               />
             ))}
-          </Group>
+          </div>
         </section>
       )}
 
@@ -184,22 +184,32 @@ function defaultLoggedTime(dayStart, dayEnd) {
   return now >= dayStart && now <= dayEnd ? now : dayStart
 }
 
-/** One hour of the timeline: the hour label, a separator line (from the
-    parent Group's divide-y), any entries logged in that hour, and a plus to
-    add one right there. */
+/** One hour of the timeline: a time pill with the add button right next to
+    it, then any entries logged in that hour as their own surface chips —
+    there's no enclosing card any more, so they need their own contrast
+    against the page background. */
 function HourRow({ hour, entries, onAdd, onEdit }) {
   return (
-    <div className="flex gap-3 px-4 py-3">
-      <span className="w-11 shrink-0 pt-1.5 text-[12px] font-medium text-label3 tnum">
-        {formatHour(hour)}
-      </span>
+    <div className="flex gap-3 py-2.5">
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-label2 shadow-card tnum">
+          {formatHour(hour)}
+        </span>
+        <button
+          onClick={onAdd}
+          aria-label={`Add food at ${formatHour(hour)}`}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-soft text-[14px] font-semibold leading-none text-violet transition-colors hover:bg-violet/20"
+        >
+          +
+        </button>
+      </div>
 
       <div className="min-w-0 flex-1 space-y-1.5">
         {entries.map((e) => (
           <button
             key={e.id}
             onClick={() => onEdit(e)}
-            className="flex w-full items-center gap-2 rounded-lg bg-fill px-2.5 py-2 text-left transition-colors hover:bg-separator/60"
+            className="flex w-full items-center gap-2 rounded-lg bg-surface px-2.5 py-2 text-left shadow-card transition-colors hover:bg-fill"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px]">{e.name}</p>
@@ -210,16 +220,6 @@ function HourRow({ hour, entries, onAdd, onEdit }) {
             <span className="shrink-0 text-[15px] text-label2 tnum">{Math.round(e.kcal)}</span>
           </button>
         ))}
-
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-1.5 py-1 text-[13px] font-medium text-violet"
-        >
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-violet-soft text-[13px] leading-none">
-            +
-          </span>
-          Add
-        </button>
       </div>
     </div>
   )
