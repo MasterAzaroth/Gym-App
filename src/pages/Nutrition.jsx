@@ -199,7 +199,7 @@ function HourRow({ hour, entries, onAdd, onEdit }) {
   return (
     <div className="flex gap-3 py-2.5">
       <div className="flex shrink-0 items-center gap-1.5">
-        <span className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-label2 shadow-card tnum">
+        <span className="w-14 shrink-0 rounded-full bg-surface py-1 text-center text-[11px] font-semibold text-label2 shadow-card tnum">
           {formatHour(hour)}
         </span>
         <button
