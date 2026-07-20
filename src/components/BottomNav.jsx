@@ -1,7 +1,5 @@
 import { NavLink } from 'react-router-dom'
 
-/* Left to right: Learning · Training · Insights · Nutrition · Profile.
-   Insights sits centre because it's the glance-at-it overview. */
 const TABS = [
   { to: '/learn',     label: 'Learning',  icon: IconLearn },
   { to: '/train',     label: 'Training',  icon: IconTrain },
@@ -10,15 +8,10 @@ const TABS = [
   { to: '/profile',   label: 'Profile',   icon: IconProfile }
 ]
 
-/**
- * Not fixed — the last row of the shell's flex column. It can't drift, because
- * it isn't positioned against the viewport at all.
- */
 export default function BottomNav() {
   return (
     <nav
-      className="shrink-0 border-t border-separator bg-surface"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/92 backdrop-blur-xl"
       aria-label="Main"
     >
       <ul className="mx-auto flex max-w-md" style={{ height: 'var(--nav-row)' }}>
@@ -46,6 +39,7 @@ export default function BottomNav() {
           </li>
         ))}
       </ul>
+      <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
     </nav>
   )
 }
@@ -54,9 +48,6 @@ const base = {
   width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none',
   stroke: 'currentColor', strokeLinecap: 'round', strokeLinejoin: 'round'
 }
-
-/* Active tab thickens its stroke instead of swapping to a filled glyph, so the
-   silhouette stays put and the change reads as emphasis. */
 const w = (active) => ({ ...base, strokeWidth: active ? 2.2 : 1.7 })
 
 function IconLearn({ active }) {

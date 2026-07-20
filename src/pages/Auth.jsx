@@ -47,7 +47,7 @@ export default function Auth() {
 
   return (
     <div
-      className="flex h-full flex-col overflow-y-auto bg-fill px-6"
+      className="flex min-h-full flex-col bg-fill px-6"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)'
