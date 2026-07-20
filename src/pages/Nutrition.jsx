@@ -31,8 +31,15 @@ export default function Nutrition() {
   }
 
   // The user's own day window (Profile → Nutrition goals), not midnight–midnight.
-  const dayStart = shortTime(profile?.day_start_time) || DEFAULT_DAY_START
-  const dayEnd   = shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
+  // Falls back to the default range if it's missing or somehow backwards —
+  // an end-before-start window would otherwise produce zero hour rows and the
+  // whole timeline would silently vanish.
+  let dayStart = shortTime(profile?.day_start_time) || DEFAULT_DAY_START
+  let dayEnd   = shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
+  if (hourOf(dayEnd) < hourOf(dayStart)) {
+    dayStart = DEFAULT_DAY_START
+    dayEnd   = DEFAULT_DAY_END
+  }
 
   const load = useCallback(async () => {
     if (!user?.id) return

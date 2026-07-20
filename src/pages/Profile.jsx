@@ -291,8 +291,11 @@ function TrainingSheet({ open, profile, onClose, onSaved }) {
   )
 }
 
+const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 }
+const DEFAULT_MACRO_SPLIT = { protein: 0.3, carbs: 0.4, fat: 0.3 } // of calories, used only when starting from zero
+
 function GoalsSheet({ open, profile, onClose, onSaved }) {
-  const [form, set] = useForm(open, {
+  const [form, set, setForm] = useForm(open, {
     goal_kcal:      profile?.goal_kcal ?? 2500,
     goal_protein_g: profile?.goal_protein_g ?? 180,
     goal_carbs_g:   profile?.goal_carbs_g ?? 280,
@@ -302,24 +305,74 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
   })
   const [saving, setSaving] = useState(false)
 
-  // Macros imply calories. Show the arithmetic so mismatches are visible.
-  const implied = Math.round(
-    (Number(form.goal_protein_g) || 0) * 4 +
-    (Number(form.goal_carbs_g) || 0) * 4 +
-    (Number(form.goal_fat_g) || 0) * 9
-  )
-  const drift = implied - (Number(form.goal_kcal) || 0)
+  // Calories is always the exact sum of the macros — there's no separate
+  // number to drift out of sync with them.
+  function setMacroGrams(key) {
+    return (e) => {
+      setForm((f) => {
+        const next = { ...f, [key]: e.target.value }
+        const p   = Number(next.goal_protein_g) || 0
+        const c   = Number(next.goal_carbs_g) || 0
+        const fat = Number(next.goal_fat_g) || 0
+        next.goal_kcal = Math.round(p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat)
+        return next
+      })
+    }
+  }
+
+  // Editing calories directly rescales every macro by the same factor, so
+  // each keeps the same share of calories it had a moment ago.
+  function setCalories(e) {
+    const newKcal = Number(e.target.value) || 0
+    setForm((f) => {
+      const p   = Number(f.goal_protein_g) || 0
+      const c   = Number(f.goal_carbs_g) || 0
+      const fat = Number(f.goal_fat_g) || 0
+      const oldKcal = p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat
+
+      if (oldKcal <= 0) {
+        return {
+          ...f,
+          goal_kcal: e.target.value,
+          goal_protein_g: Math.round((newKcal * DEFAULT_MACRO_SPLIT.protein) / KCAL_PER_G.protein),
+          goal_carbs_g:   Math.round((newKcal * DEFAULT_MACRO_SPLIT.carbs) / KCAL_PER_G.carbs),
+          goal_fat_g:     Math.round((newKcal * DEFAULT_MACRO_SPLIT.fat) / KCAL_PER_G.fat)
+        }
+      }
+
+      const scale = newKcal / oldKcal
+      return {
+        ...f,
+        goal_kcal: e.target.value,
+        goal_protein_g: Math.round(p * scale),
+        goal_carbs_g:   Math.round(c * scale),
+        goal_fat_g:     Math.round(fat * scale)
+      }
+    })
+  }
+
+  const p   = Number(form.goal_protein_g) || 0
+  const c   = Number(form.goal_carbs_g) || 0
+  const fat = Number(form.goal_fat_g) || 0
+  const totalKcal = p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat
+  const pctOf = (grams, per) => (totalKcal > 0 ? Math.round((grams * per / totalKcal) * 100) : 0)
+
+  // An end-before-start window leaves the Nutrition tab's hourly timeline
+  // with zero rows to show, so it isn't a valid state to save.
+  const dayStartVal = form.day_start_time || DEFAULT_DAY_START
+  const dayEndVal   = form.day_end_time   || DEFAULT_DAY_END
+  const dayRangeInvalid = dayEndVal <= dayStartVal
 
   async function save() {
     setSaving(true)
     try {
       await updateProfile(profile.id, {
-        goal_kcal:      Number(form.goal_kcal) || 0,
-        goal_protein_g: Number(form.goal_protein_g) || 0,
-        goal_carbs_g:   Number(form.goal_carbs_g) || 0,
-        goal_fat_g:     Number(form.goal_fat_g) || 0,
-        day_start_time: form.day_start_time || DEFAULT_DAY_START,
-        day_end_time:   form.day_end_time   || DEFAULT_DAY_END
+        goal_kcal:      Math.round(totalKcal),
+        goal_protein_g: p,
+        goal_carbs_g:   c,
+        goal_fat_g:     fat,
+        day_start_time: dayStartVal,
+        day_end_time:   dayEndVal
       })
       onSaved()
     } finally { setSaving(false) }
@@ -327,28 +380,21 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Nutrition goals"
-           footer={<Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>}>
+           footer={<Button onClick={save} disabled={saving || dayRangeInvalid}>{saving ? 'Saving…' : 'Save'}</Button>}>
       <Group className="mt-2">
         <Field label="Calories" type="number" inputMode="numeric" suffix="kcal"
-               value={form.goal_kcal ?? ''} onChange={set('goal_kcal')} />
-        <Field label="Protein" type="number" inputMode="numeric" suffix="g"
-               value={form.goal_protein_g ?? ''} onChange={set('goal_protein_g')} />
-        <Field label="Carbs" type="number" inputMode="numeric" suffix="g"
-               value={form.goal_carbs_g ?? ''} onChange={set('goal_carbs_g')} />
-        <Field label="Fat" type="number" inputMode="numeric" suffix="g"
-               value={form.goal_fat_g ?? ''} onChange={set('goal_fat_g')} />
+               value={form.goal_kcal ?? ''} onChange={setCalories} />
+        <Field label="Protein" type="number" inputMode="numeric" suffix={`g · ${pctOf(p, KCAL_PER_G.protein)}%`}
+               value={form.goal_protein_g ?? ''} onChange={setMacroGrams('goal_protein_g')} />
+        <Field label="Carbs" type="number" inputMode="numeric" suffix={`g · ${pctOf(c, KCAL_PER_G.carbs)}%`}
+               value={form.goal_carbs_g ?? ''} onChange={setMacroGrams('goal_carbs_g')} />
+        <Field label="Fat" type="number" inputMode="numeric" suffix={`g · ${pctOf(fat, KCAL_PER_G.fat)}%`}
+               value={form.goal_fat_g ?? ''} onChange={setMacroGrams('goal_fat_g')} />
       </Group>
-
-      <Card className="mt-4 p-4">
-        <p className="text-[13px] font-medium text-label2">Your macros add up to</p>
-        <p className="mt-0.5 text-[22px] font-semibold tnum">{implied} kcal</p>
-        {Math.abs(drift) > 50 && (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-danger">
-            That's {Math.abs(drift)} kcal {drift > 0 ? 'above' : 'below'} your calorie goal.
-            Protein and carbs are 4 kcal per gram, fat is 9.
-          </p>
-        )}
-      </Card>
+      <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
+        Calories are always the sum of your macros — change calories and the macros rescale to keep
+        the same split; change a macro and calories update to match.
+      </p>
 
       <Group className="mt-4">
         <Field label="Day starts" type="time"
@@ -356,10 +402,16 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
         <Field label="Day ends" type="time"
                value={form.day_end_time ?? DEFAULT_DAY_END} onChange={set('day_end_time')} />
       </Group>
-      <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
-        Bounds the time picker when you log food in the Nutrition tab — handy if you eat past
-        midnight or start early.
-      </p>
+      {dayRangeInvalid ? (
+        <p className="mt-3 px-1 text-[13px] leading-relaxed text-danger">
+          Day ends must be later than day starts.
+        </p>
+      ) : (
+        <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
+          Bounds the time picker when you log food in the Nutrition tab — handy if you eat past
+          midnight or start early.
+        </p>
+      )}
     </Sheet>
   )
 }
