@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 /* iOS grammar: grouped background, white cards, generous radii, one accent,
    hairline separators, almost no borders. */
@@ -192,7 +193,10 @@ export function Sheet({ open, onClose, title, children, footer }) {
 
   if (!open) return null
 
-  return (
+  // Portaled straight to <body>, outside <main>'s overflow-y-auto — iOS Safari
+  // clips/contains position:fixed descendants to a scrolling ancestor instead
+  // of the real screen, which left the sheet's footer sitting under the nav.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div
         className="backdrop-enter absolute inset-0 bg-label/30 backdrop-blur-[2px]"
@@ -217,7 +221,8 @@ export function Sheet({ open, onClose, title, children, footer }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
         {footer && <div className="border-t border-separator px-5 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
