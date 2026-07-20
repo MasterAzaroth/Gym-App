@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
-  Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, MacroBar, Chevron
+  Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, Chevron
 } from '../components/ui'
 import {
   listNutrition, addNutritionEntry, updateNutritionEntry, deleteNutritionEntry, listFoods
 } from '../lib/db'
 import {
-  MEALS, scaleFood, sumEntries, toISODate, addDays, friendlyDate
+  MEALS, scaleFood, sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS
 } from '../lib/nutrition'
 
 export default function Nutrition() {
@@ -46,12 +46,13 @@ export default function Nutrition() {
   useEffect(() => { load() }, [load])
 
   const totals = useMemo(() => sumEntries(entries), [entries])
-  const remaining = Math.round(goals.kcal - totals.kcal)
+  const weekDates = useMemo(() => getWeekDates(date), [date])
+  const todayISO = toISODate(new Date())
 
   return (
     <>
       {/* Date switcher — the whole tab is scoped to one day */}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <StepButton dir="prev" onClick={() => setDate((d) => addDays(d, -1))} />
         <div className="text-center">
           <h1 className="text-[22px] font-bold tracking-[-0.02em]">{friendlyDate(date)}</h1>
@@ -62,35 +63,39 @@ export default function Nutrition() {
         <StepButton dir="next" onClick={() => setDate((d) => addDays(d, 1))} disabled={isFuture} />
       </div>
 
-      {/* Day summary */}
-      <Card className="mb-6 p-5">
-        <div className="flex items-baseline justify-between">
-          <div>
-            <p className="text-[13px] font-medium text-label2">Calories</p>
-            <p className="mt-0.5 text-[32px] font-bold tracking-[-0.02em] tnum">
-              {Math.round(totals.kcal)}
-              <span className="text-[17px] font-medium text-label2"> / {goals.kcal}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[13px] font-medium text-label2">
-              {remaining >= 0 ? 'Remaining' : 'Over'}
-            </p>
-            <p className={`mt-0.5 text-[22px] font-semibold tnum ${remaining < 0 ? 'text-danger' : ''}`}>
-              {Math.abs(remaining)}
-            </p>
-          </div>
-        </div>
+      {/* Week strip — one pill per day, letters only */}
+      <div className="mb-6 flex gap-2">
+        {weekDates.map((d, i) => {
+          const dISO = toISODate(d)
+          const selected = dISO === iso
+          const future = dISO > todayISO
+          return (
+            <button
+              key={dISO}
+              onClick={() => !future && setDate(d)}
+              disabled={future}
+              aria-current={selected ? 'date' : undefined}
+              aria-label={d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+              className={[
+                'aspect-square flex-1 rounded-full text-[13px] font-semibold transition-colors',
+                selected ? 'bg-violet text-white' : 'bg-surface text-label2 shadow-card',
+                future ? 'opacity-30' : ''
+              ].join(' ')}
+            >
+              {WEEKDAY_LETTERS[i]}
+            </button>
+          )
+        })}
+      </div>
 
-        <div className="mt-5 space-y-3.5">
-          <MacroBar label="Protein" value={totals.protein_g} goal={goals.protein} color="#6E56CF" />
-          <MacroBar label="Carbs"   value={totals.carbs_g}   goal={goals.carbs}   color="#3B9EDB" />
-          <MacroBar label="Fat"     value={totals.fat_g}     goal={goals.fat}     color="#E8A33D" />
+      {/* Macro summary — one compact row, not a card per macro */}
+      <Card className="mb-6 p-4">
+        <div className="grid grid-cols-4 gap-2">
+          <MacroTile label="Calories" consumed={totals.kcal}      goal={goals.kcal}    color="#6E56CF" />
+          <MacroTile label="Protein"  consumed={totals.protein_g} goal={goals.protein} color="#3B9EDB" unit="g" />
+          <MacroTile label="Carbs"    consumed={totals.carbs_g}   goal={goals.carbs}   color="#E8A33D" unit="g" />
+          <MacroTile label="Fat"      consumed={totals.fat_g}     goal={goals.fat}     color="#34A876" unit="g" />
         </div>
-
-        <p className="mt-4 border-t border-separator pt-3 text-[13px] text-label2">
-          Goals come from your profile. Change them under Profile → Nutrition goals.
-        </p>
       </Card>
 
       {loading && <Spinner />}
@@ -405,6 +410,35 @@ function Macro({ label, value }) {
     <div>
       <p className="text-[17px] font-semibold tnum">{value}</p>
       <p className="mt-0.5 text-[11px] text-label2">{label}</p>
+    </div>
+  )
+}
+
+/** One column of the macro row: consumed, then what's left (or over), then a
+    hairline progress bar. Four of these sit side by side instead of one bar
+    per macro in a tall card. */
+function MacroTile({ label, consumed, goal, unit = '', color }) {
+  const remaining = Math.round(goal - consumed)
+  const over = goal > 0 && consumed > goal
+  const pct = goal > 0 ? Math.min((consumed / goal) * 100, 100) : 0
+
+  return (
+    <div className="text-center">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.04em] text-label2">
+        {label}
+      </p>
+      <p className="mt-1 text-[17px] font-bold tnum">
+        {Math.round(consumed)}{unit}
+      </p>
+      <p className={`text-[11px] tnum ${over ? 'text-danger' : 'text-label3'}`}>
+        {over ? `${Math.abs(remaining)}${unit} over` : `${remaining}${unit} left`}
+      </p>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-separator">
+        <div
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{ width: `${pct}%`, backgroundColor: over ? '#D93843' : color }}
+        />
+      </div>
     </div>
   )
 }

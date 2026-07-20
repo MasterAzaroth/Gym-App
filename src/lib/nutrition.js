@@ -48,6 +48,22 @@ export function addDays(date, n) {
   return d
 }
 
+export const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+/** Monday of the week containing `date`, at local midnight. */
+export function startOfWeek(date) {
+  const d = new Date(date)
+  const day = d.getDay() // 0 = Sunday
+  const diff = day === 0 ? -6 : 1 - day
+  return addDays(d, diff)
+}
+
+/** The 7 dates (Mon–Sun) of the week containing `date`. */
+export function getWeekDates(date) {
+  const monday = startOfWeek(date)
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+}
+
 export function friendlyDate(date) {
   const iso = toISODate(date)
   if (iso === toISODate(new Date())) return 'Today'
