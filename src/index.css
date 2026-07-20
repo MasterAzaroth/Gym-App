@@ -2,20 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --nav-row: 52px;
-  --nav-h: calc(var(--nav-row) + env(safe-area-inset-bottom, 0px));
-}
+:root { --nav-row: 52px; }
 
 html, body, #root { height: 100%; }
-
 html { background-color: #F2F2F7; }
 
 body {
   @apply bg-fill text-label antialiased;
-  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
   letter-spacing: -0.011em;
+}
+
+/*
+ * The shell owns the viewport height.
+ *
+ * 100dvh is the DYNAMIC viewport: in Safari it excludes the toolbar, in an
+ * installed PWA it's the whole screen. The nav is an ordinary flex child at the
+ * end of this column, so it sits at the bottom of whatever is actually visible.
+ * That's the fix — `position: fixed; bottom: 0` anchors to the LAYOUT viewport,
+ * which ignores Safari's toolbar, so on short pages (Learning, Training) the bar
+ * ended up behind it.
+ *
+ * 100vh first as a fallback for anything too old for dvh.
+ */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
 }
 
 .tnum { font-variant-numeric: tabular-nums; }

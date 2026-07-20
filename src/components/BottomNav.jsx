@@ -8,10 +8,12 @@ const TABS = [
   { to: '/profile',   label: 'Profile',   icon: IconProfile }
 ]
 
+/* Last row of the shell's flex column. Not positioned, so nothing can shift it. */
 export default function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/92 backdrop-blur-xl"
+      className="shrink-0 border-t border-separator bg-surface"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >
       <ul className="mx-auto flex max-w-md" style={{ height: 'var(--nav-row)' }}>
@@ -39,7 +41,6 @@ export default function BottomNav() {
           </li>
         ))}
       </ul>
-      <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
     </nav>
   )
 }
