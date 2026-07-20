@@ -5,7 +5,7 @@ import {
   Spinner, ErrorNote, Logo
 } from '../components/ui'
 import { getProfile, updateProfile, listBodyMetrics, upsertBodyMetric } from '../lib/db'
-import { toISODate } from '../lib/nutrition'
+import { toISODate, formatTime, shortTime, DEFAULT_DAY_START, DEFAULT_DAY_END } from '../lib/nutrition'
 
 const TIERS = {
   free:    { name: 'Free',    price: '€0' },
@@ -112,6 +112,11 @@ export default function Profile() {
           <Row label="Protein"        value={`${profile?.goal_protein_g ?? 180} g`} onClick={() => setSheet('goals')} />
           <Row label="Carbs"          value={`${profile?.goal_carbs_g ?? 280} g`}   onClick={() => setSheet('goals')} />
           <Row label="Fat"            value={`${profile?.goal_fat_g ?? 80} g`}      onClick={() => setSheet('goals')} />
+          <Row
+            label="Day window"
+            value={`${formatTime(shortTime(profile?.day_start_time) || DEFAULT_DAY_START)} – ${formatTime(shortTime(profile?.day_end_time) || DEFAULT_DAY_END)}`}
+            onClick={() => setSheet('goals')}
+          />
         </Group>
       </Section>
 
@@ -291,7 +296,9 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
     goal_kcal:      profile?.goal_kcal ?? 2500,
     goal_protein_g: profile?.goal_protein_g ?? 180,
     goal_carbs_g:   profile?.goal_carbs_g ?? 280,
-    goal_fat_g:     profile?.goal_fat_g ?? 80
+    goal_fat_g:     profile?.goal_fat_g ?? 80,
+    day_start_time: shortTime(profile?.day_start_time) || DEFAULT_DAY_START,
+    day_end_time:   shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
   })
   const [saving, setSaving] = useState(false)
 
@@ -310,7 +317,9 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
         goal_kcal:      Number(form.goal_kcal) || 0,
         goal_protein_g: Number(form.goal_protein_g) || 0,
         goal_carbs_g:   Number(form.goal_carbs_g) || 0,
-        goal_fat_g:     Number(form.goal_fat_g) || 0
+        goal_fat_g:     Number(form.goal_fat_g) || 0,
+        day_start_time: form.day_start_time || DEFAULT_DAY_START,
+        day_end_time:   form.day_end_time   || DEFAULT_DAY_END
       })
       onSaved()
     } finally { setSaving(false) }
@@ -340,6 +349,17 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
           </p>
         )}
       </Card>
+
+      <Group className="mt-4">
+        <Field label="Day starts" type="time"
+               value={form.day_start_time ?? DEFAULT_DAY_START} onChange={set('day_start_time')} />
+        <Field label="Day ends" type="time"
+               value={form.day_end_time ?? DEFAULT_DAY_END} onChange={set('day_end_time')} />
+      </Group>
+      <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
+        Bounds the time picker when you log food in the Nutrition tab — handy if you eat past
+        midnight or start early.
+      </p>
     </Sheet>
   )
 }

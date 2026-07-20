@@ -214,7 +214,7 @@ export async function listNutrition(userId, isoDate) {
     .select('*')
     .eq('user_id', userId)
     .eq('entry_date', isoDate)
-    .order('created_at')
+    .order('logged_time')
   if (error) throw error
   return data ?? []
 }

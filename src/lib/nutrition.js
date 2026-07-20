@@ -26,12 +26,26 @@ function round(n, dp = 0) {
   return Math.round((Number(n) || 0) * m) / m
 }
 
-export const MEALS = [
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'lunch',     label: 'Lunch' },
-  { id: 'dinner',    label: 'Dinner' },
-  { id: 'snack',     label: 'Snacks' }
-]
+export const DEFAULT_DAY_START = '06:00'
+export const DEFAULT_DAY_END   = '23:59'
+
+/** DB "time" columns come back as "HH:MM:SS" — inputs and display both want "HH:MM". */
+export const shortTime = (t) => (t ? t.slice(0, 5) : t)
+
+/** "14:05" -> "2:05 PM", localized. */
+export function formatTime(t) {
+  if (!t) return ''
+  const [h, m] = shortTime(t).split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
+/** Current local time as "HH:MM", for defaulting a time input. */
+export function nowTime() {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 /** Local YYYY-MM-DD. Never toISOString() here — it shifts to UTC and files your
     late dinner under tomorrow. */

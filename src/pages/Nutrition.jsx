@@ -7,7 +7,8 @@ import {
   listNutrition, addNutritionEntry, updateNutritionEntry, deleteNutritionEntry, listFoods
 } from '../lib/db'
 import {
-  MEALS, scaleFood, sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS
+  scaleFood, sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS,
+  formatTime, nowTime, shortTime, DEFAULT_DAY_START, DEFAULT_DAY_END
 } from '../lib/nutrition'
 
 export default function Nutrition() {
@@ -17,8 +18,8 @@ export default function Nutrition() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [addingMeal, setAddingMeal] = useState(null)   // meal id when adding
-  const [editing, setEditing] = useState(null)         // entry being edited
+  const [addingOpen, setAddingOpen] = useState(false)
+  const [editing, setEditing] = useState(null)   // entry being edited
 
   const iso = toISODate(date)
 
@@ -28,6 +29,10 @@ export default function Nutrition() {
     carbs:   profile?.goal_carbs_g ?? 280,
     fat:     profile?.goal_fat_g ?? 80
   }
+
+  // The user's own day window (Profile → Nutrition goals), not midnight–midnight.
+  const dayStart = shortTime(profile?.day_start_time) || DEFAULT_DAY_START
+  const dayEnd   = shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
 
   const load = useCallback(async () => {
     if (!user?.id) return
@@ -96,50 +101,53 @@ export default function Nutrition() {
       {loading && <Spinner />}
       {error && <ErrorNote error={error} onRetry={load} />}
 
-      {!loading && !error && MEALS.map((meal) => {
-        const mealEntries = entries.filter((e) => e.meal === meal.id)
-        const mealKcal = Math.round(sumEntries(mealEntries).kcal)
+      {/* Food log — one chronological list across the user's day window,
+          instead of fixed breakfast/lunch/dinner/snack sections. */}
+      {!loading && !error && (
+        <section className="mb-5">
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+              Food
+            </h2>
+            <span className="text-[13px] text-label2 tnum">
+              {formatTime(dayStart)} – {formatTime(dayEnd)}
+            </span>
+          </div>
 
-        return (
-          <section key={meal.id} className="mb-5">
-            <div className="mb-2 flex items-baseline justify-between px-1">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-                {meal.label}
-              </h2>
-              <span className="text-[13px] text-label2 tnum">{mealKcal} kcal</span>
-            </div>
-
-            <Group>
-              {mealEntries.map((e) => (
-                <Row
-                  key={e.id}
-                  label={e.name}
-                  sub={`${Math.round(e.grams)} g · P ${e.protein_g} · C ${e.carbs_g} · F ${e.fat_g}`}
-                  value={`${Math.round(e.kcal)}`}
-                  onClick={() => setEditing(e)}
-                />
-              ))}
-              <button
-                onClick={() => setAddingMeal(meal.id)}
-                className="flex w-full items-center gap-2 px-4 py-3.5 text-left text-[17px] text-violet transition-colors hover:bg-fill"
-              >
-                <span className="text-[20px] leading-none">+</span> Add food
-              </button>
-            </Group>
-          </section>
-        )
-      })}
+          <Group>
+            {entries.map((e) => (
+              <Row
+                key={e.id}
+                label={e.name}
+                sub={`${formatTime(e.logged_time)} · ${Math.round(e.grams)} g · P ${e.protein_g} · C ${e.carbs_g} · F ${e.fat_g}`}
+                value={`${Math.round(e.kcal)}`}
+                onClick={() => setEditing(e)}
+              />
+            ))}
+            <button
+              onClick={() => setAddingOpen(true)}
+              className="flex w-full items-center gap-2 px-4 py-3.5 text-left text-[17px] text-violet transition-colors hover:bg-fill"
+            >
+              <span className="text-[20px] leading-none">+</span> Add food
+            </button>
+          </Group>
+        </section>
+      )}
 
       <AddSheet
-        meal={addingMeal}
+        open={addingOpen}
         userId={user?.id}
         isoDate={iso}
-        onClose={() => setAddingMeal(null)}
-        onSaved={() => { setAddingMeal(null); load() }}
+        dayStart={dayStart}
+        dayEnd={dayEnd}
+        onClose={() => setAddingOpen(false)}
+        onSaved={() => { setAddingOpen(false); load() }}
       />
 
       <EditSheet
         entry={editing}
+        dayStart={dayStart}
+        dayEnd={dayEnd}
         onClose={() => setEditing(null)}
         onSaved={() => { setEditing(null); load() }}
       />
@@ -160,21 +168,37 @@ function StepButton({ dir, onClick, disabled }) {
   )
 }
 
+/** The time to start a new entry at: now, if that falls inside the user's day
+    window, otherwise the start of the window. */
+function defaultLoggedTime(dayStart, dayEnd) {
+  const now = nowTime()
+  return now >= dayStart && now <= dayEnd ? now : dayStart
+}
+
 /* ---------------------------------------------------------------- add sheet */
 
-function AddSheet({ meal, userId, isoDate, onClose, onSaved }) {
+function AddSheet({ open, userId, isoDate, dayStart, dayEnd, onClose, onSaved }) {
   const [query, setQuery] = useState('')
   const [foods, setFoods] = useState([])
   const [loading, setLoading] = useState(false)
   const [picked, setPicked] = useState(null)
   const [grams, setGrams] = useState(100)
+  const [loggedTime, setLoggedTime] = useState(dayStart)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  const open = Boolean(meal)
+  // Reset once per opening — not on every keystroke in the search box below.
+  useEffect(() => {
+    if (!open) return
+    setPicked(null)
+    setQuery('')
+    setError(null)
+    setLoggedTime(defaultLoggedTime(dayStart, dayEnd))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   useEffect(() => {
-    if (!open) { setPicked(null); setQuery(''); setError(null); return }
+    if (!open) return
     setLoading(true)
     listFoods(query).then(setFoods).catch((e) => setError(e.message)).finally(() => setLoading(false))
   }, [open, query])
@@ -193,7 +217,7 @@ function AddSheet({ meal, userId, isoDate, onClose, onSaved }) {
       await addNutritionEntry(userId, {
         food_id: picked.id,
         entry_date: isoDate,
-        meal,
+        logged_time: loggedTime,
         name: picked.name,
         grams: Number(grams),
         ...macros
@@ -206,15 +230,13 @@ function AddSheet({ meal, userId, isoDate, onClose, onSaved }) {
     }
   }
 
-  const mealLabel = MEALS.find((m) => m.id === meal)?.label ?? 'Meal'
-
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title={picked ? 'Portion' : `Add to ${mealLabel}`}
+      title={picked ? 'Portion' : 'Add food'}
       footer={picked && (
-        <Button onClick={save} disabled={saving || !grams}>
+        <Button onClick={save} disabled={saving || !grams || !loggedTime}>
           {saving ? 'Adding…' : `Add ${macros.kcal} kcal`}
         </Button>
       )}
@@ -272,6 +294,14 @@ function AddSheet({ meal, userId, isoDate, onClose, onSaved }) {
               autoFocus
               onChange={(e) => setGrams(e.target.value)}
             />
+            <Field
+              label="Time"
+              type="time"
+              min={dayStart}
+              max={dayEnd}
+              value={loggedTime}
+              onChange={(e) => setLoggedTime(e.target.value)}
+            />
           </Group>
 
           {picked.serving_grams && (
@@ -311,13 +341,17 @@ function AddSheet({ meal, userId, isoDate, onClose, onSaved }) {
 
 /* --------------------------------------------------------------- edit sheet */
 
-function EditSheet({ entry, onClose, onSaved }) {
+function EditSheet({ entry, dayStart, dayEnd, onClose, onSaved }) {
   const [grams, setGrams] = useState(100)
+  const [loggedTime, setLoggedTime] = useState(dayStart)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (entry) setGrams(entry.grams)
+    if (!entry) return
+    setGrams(entry.grams)
+    setLoggedTime(shortTime(entry.logged_time) || dayStart)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry])
 
   // Rescale from the entry's own snapshot, so it stays correct even if the
@@ -337,7 +371,7 @@ function EditSheet({ entry, onClose, onSaved }) {
     setSaving(true)
     setError(null)
     try {
-      await updateNutritionEntry(entry.id, { grams: Number(grams), ...macros })
+      await updateNutritionEntry(entry.id, { grams: Number(grams), logged_time: loggedTime, ...macros })
       onSaved()
     } catch (e) {
       setError(e.message)
@@ -364,7 +398,7 @@ function EditSheet({ entry, onClose, onSaved }) {
       onClose={onClose}
       title={entry?.name ?? 'Entry'}
       footer={
-        <Button onClick={save} disabled={saving || !grams}>
+        <Button onClick={save} disabled={saving || !grams || !loggedTime}>
           {saving ? 'Saving…' : 'Save'}
         </Button>
       }
@@ -379,6 +413,14 @@ function EditSheet({ entry, onClose, onSaved }) {
           suffix="g"
           value={grams}
           onChange={(e) => setGrams(e.target.value)}
+        />
+        <Field
+          label="Time"
+          type="time"
+          min={dayStart}
+          max={dayEnd}
+          value={loggedTime}
+          onChange={(e) => setLoggedTime(e.target.value)}
         />
       </Group>
 
