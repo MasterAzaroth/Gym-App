@@ -217,38 +217,14 @@ export function ErrorNote({ error, onRetry }) {
 
 /** Bottom sheet. Slides up, dismisses on backdrop tap or Escape. */
 export function Sheet({ open, onClose, title, children, footer }) {
-  // iOS doesn't resize position:fixed content when the keyboard opens — it
-  // pans the visual viewport instead, so a fixed-height overlay ends up
-  // showing the wrong slice of itself (the field you just tapped can end up
-  // under the keyboard). Tracking visualViewport's height AND scroll offset,
-  // and countering the pan with a matching transform, keeps the sheet locked
-  // to what's actually visible above the keyboard.
-  const [vh, setVh] = useState(null)
-  const [vOffset, setVOffset] = useState(0)
-
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
-
-    const vv = window.visualViewport
-    const update = () => {
-      if (!vv) return
-      setVh(vv.height)
-      setVOffset(vv.offsetTop)
-    }
-    update()
-    vv?.addEventListener('resize', update)
-    vv?.addEventListener('scroll', update)
-
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
-      vv?.removeEventListener('resize', update)
-      vv?.removeEventListener('scroll', update)
-      setVh(null)
-      setVOffset(0)
     }
   }, [open, onClose])
 
@@ -257,14 +233,16 @@ export function Sheet({ open, onClose, title, children, footer }) {
   // Portaled straight to <body>, outside <main>'s overflow-y-auto — iOS Safari
   // clips/contains position:fixed descendants to a scrolling ancestor instead
   // of the real screen, which left the sheet's footer sitting under the nav.
+  // Keyboard-avoidance comes from the viewport meta's
+  // interactive-widget=resizes-content (index.html) alone — it makes 100dvh
+  // itself shrink when the keyboard opens, the same mechanism the rest of the
+  // app's layout already relies on. A JS visualViewport-tracking version of
+  // this was tried on top of it and the two fought each other: the manual
+  // compensation kept "correcting" for a pan the meta tag had already
+  // prevented, which is what pushed the sheet's content up and collapsed its
+  // scroll area.
   return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-50 flex flex-col justify-end"
-      style={{
-        height: vh ? `${vh}px` : '100dvh',
-        transform: vOffset ? `translateY(${vOffset}px)` : undefined
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div
         className="backdrop-enter absolute inset-0 bg-label/30"
         onClick={onClose}

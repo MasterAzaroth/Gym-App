@@ -16,6 +16,7 @@ export default function ActiveWorkout() {
   const [error, setError] = useState(null)
   const [finishing, setFinishing] = useState(false)
   const [pendingExtra, setPendingExtra] = useState({}) // { [exerciseId]: number[] } — added but not yet logged
+  const [activeExerciseId, setActiveExerciseId] = useState(null)
 
   const timer = useRestTimer()
 
@@ -41,6 +42,16 @@ export default function ActiveWorkout() {
   useEffect(() => { load() }, [load])
 
   const exercises = useMemo(() => buildExercises(routine, sets, pendingExtra), [routine, sets, pendingExtra])
+
+  // Default to the first exercise once the plan loads, without stomping on
+  // whichever tab the user has already switched to.
+  useEffect(() => {
+    if (exercises.length && activeExerciseId == null) setActiveExerciseId(exercises[0].exerciseId)
+  }, [exercises, activeExerciseId])
+
+  const activeIndex = exercises.findIndex((e) => e.exerciseId === activeExerciseId)
+  const activeExercise = exercises[activeIndex] ?? exercises[0] ?? null
+  const nextExercise = exercises[activeIndex + 1] ?? null
 
   async function logSet(exerciseId, setIndex, values, plan) {
     const saved = await addSet(workout.id, exerciseId, setIndex, values)
@@ -111,18 +122,31 @@ export default function ActiveWorkout() {
 
       {error && <div className="mb-4"><ErrorNote error={error} /></div>}
 
-      <div className="space-y-4">
+      {/* One exercise on screen at a time — the row above is the way through
+          the workout, not a table of contents. */}
+      <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1">
         {exercises.map((ex) => (
-          <ExerciseCard
+          <ExerciseTab
             key={ex.exerciseId}
             exercise={ex}
-            onLog={logSet}
-            onEdit={editSet}
-            onRemove={removeSet}
-            onAddSlot={addSlot}
+            active={ex.exerciseId === activeExercise?.exerciseId}
+            done={isExerciseDone(ex)}
+            onClick={() => setActiveExerciseId(ex.exerciseId)}
           />
         ))}
       </div>
+
+      {activeExercise && (
+        <ExercisePanel
+          exercise={activeExercise}
+          nextExercise={nextExercise}
+          onLog={logSet}
+          onEdit={editSet}
+          onRemove={removeSet}
+          onAddSlot={addSlot}
+          onNext={() => setActiveExerciseId(nextExercise.exerciseId)}
+        />
+      )}
 
       <div className="mt-6">
         <Button onClick={finish} disabled={finishing}>
@@ -211,16 +235,54 @@ function buildExercises(routine, workoutSets, pendingExtra) {
   return result
 }
 
-/* ---------------------------------------------------------------- exercise card */
+/** Every planned set for the exercise is logged — the rest of a workout run
+    is just working through this becoming true for each tab in turn. */
+function isExerciseDone(exercise) {
+  const planned = exercise.slots.filter((s) => s.plan)
+  return planned.length > 0 && planned.every((s) => s.logged)
+}
 
-function ExerciseCard({ exercise, onLog, onEdit, onRemove, onAddSlot }) {
+/** "Lat pulldown" -> "LP", "Dip" -> "DI". Two letters read as a badge at a
+    glance; a full name at that size doesn't. */
+function initials(name) {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  return (words[0]?.slice(0, 2) ?? '??').toUpperCase()
+}
+
+/* ----------------------------------------------------------------- exercise tab */
+
+function ExerciseTab({ exercise, active, done, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={exercise.exerciseName}
+      aria-current={active ? 'true' : undefined}
+      className={[
+        'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold tnum transition-colors',
+        active ? 'bg-violet text-white' : done ? 'bg-violet-soft text-violet' : 'bg-surface text-label2 shadow-card'
+      ].join(' ')}
+    >
+      {initials(exercise.exerciseName)}
+      {done && !active && (
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-violet text-white">
+          <CheckIcon size={8} />
+        </span>
+      )}
+    </button>
+  )
+}
+
+/* --------------------------------------------------------------- exercise panel */
+
+function ExercisePanel({ exercise, nextExercise, onLog, onEdit, onRemove, onAddSlot, onNext }) {
   const nextIndex = exercise.slots.length
     ? Math.max(...exercise.slots.map((s) => s.setIndex)) + 1
     : 0
 
   return (
     <Card className="p-4">
-      <h3 className="text-[17px] font-semibold">{exercise.exerciseName}</h3>
+      <h3 className="text-[20px] font-semibold">{exercise.exerciseName}</h3>
       <div className="mt-3 space-y-2">
         {exercise.slots.map((slot) => (
           <SetRow
@@ -233,12 +295,24 @@ function ExerciseCard({ exercise, onLog, onEdit, onRemove, onAddSlot }) {
           />
         ))}
       </div>
-      <button
-        onClick={() => onAddSlot(exercise.exerciseId, nextIndex)}
-        className="mt-3 text-[13px] font-medium text-violet"
-      >
-        + Add set
-      </button>
+
+      <div className="mt-3 flex items-center justify-between">
+        <button
+          onClick={() => onAddSlot(exercise.exerciseId, nextIndex)}
+          className="text-[13px] font-medium text-violet"
+        >
+          + Add set
+        </button>
+        {nextExercise && (
+          <button
+            onClick={onNext}
+            className="flex items-center gap-1 text-[13px] font-medium text-label2"
+          >
+            Next: {nextExercise.exerciseName}
+            <span aria-hidden="true">→</span>
+          </button>
+        )}
+      </div>
     </Card>
   )
 }
@@ -389,9 +463,9 @@ function ElapsedMinutes({ since }) {
   return Math.max(0, Math.round((now - new Date(since).getTime()) / 60000))
 }
 
-function CheckIcon() {
+function CheckIcon({ size = 16 }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round" />
     </svg>

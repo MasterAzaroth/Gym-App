@@ -5,7 +5,8 @@ import {
   PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field, useAutoFocus
 } from '../components/ui'
 import {
-  listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout
+  listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout,
+  deleteWorkout
 } from '../lib/db'
 
 export default function Training() {
@@ -93,6 +94,16 @@ function History({ userId, onOpen }) {
 
   useEffect(() => { load() }, [load])
 
+  async function handleDelete(id, name) {
+    if (!confirm(`Delete "${name ?? 'this session'}"? This can't be undone.`)) return
+    try {
+      await deleteWorkout(id)
+      load()
+    } catch (e) {
+      setState((s) => ({ ...s, error: e.message }))
+    }
+  }
+
   if (state.loading) return <Spinner />
   if (state.error) return <ErrorNote error={state.error} onRetry={load} />
 
@@ -108,8 +119,8 @@ function History({ userId, onOpen }) {
   return (
     <div className="space-y-3">
       {state.workouts.map((w) => (
-        <Card key={w.id} className="p-0">
-          <button onClick={() => onOpen(w.id)} className="w-full px-4 py-4 text-left">
+        <Card key={w.id} className="flex items-stretch p-0">
+          <button onClick={() => onOpen(w.id)} className="min-w-0 flex-1 px-4 py-4 text-left">
             <div className="flex items-baseline justify-between gap-3">
               <h3 className="truncate text-[17px] font-semibold">{w.name ?? 'Session'}</h3>
               <span className="shrink-0 text-[13px] text-label2">
@@ -123,6 +134,13 @@ function History({ userId, onOpen }) {
                 <span><b className="font-semibold text-label">{w.minutes}</b> min</span>
               )}
             </div>
+          </button>
+          <button
+            onClick={() => handleDelete(w.id, w.name)}
+            aria-label="Delete workout"
+            className="shrink-0 px-4 text-[16px] text-label3 transition-colors hover:text-danger"
+          >
+            ×
           </button>
         </Card>
       ))}
