@@ -12,6 +12,21 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#F2F2F7" />
 
+    <script>
+      // Runs before anything paints, so there's no flash of the wrong theme
+      // while React boots. ThemeContext re-derives the same state on mount.
+      (function () {
+        try {
+          var pref = localStorage.getItem('ironlog.theme') || 'system'
+          var dark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+          document.querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', dark ? '#000000' : '#F2F2F7')
+        } catch (e) {}
+      })()
+    </script>
+
     <!-- Inter is the fallback for Android/Windows; iOS uses SF natively and loads nothing. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

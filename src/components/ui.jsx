@@ -244,7 +244,7 @@ export function Sheet({ open, onClose, title, children, footer }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div
-        className="backdrop-enter absolute inset-0 bg-label/30"
+        className="backdrop-enter absolute inset-0 bg-black/30"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -298,8 +298,8 @@ export function MacroBar({ label, value, goal, unit = 'g', color = '#6E56CF' }) 
 
 export function Chevron() {
   return (
-    <svg width="8" height="13" viewBox="0 0 8 13" fill="none" className="shrink-0">
-      <path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="#C7C7CC" strokeWidth="2"
+    <svg width="8" height="13" viewBox="0 0 8 13" fill="none" className="shrink-0 text-label3">
+      <path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )

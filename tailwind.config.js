@@ -1,23 +1,25 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
-        // iOS greyscale
-        label: '#1C1C1E',        // primary text
-        label2: '#6E6E73',       // secondary text
-        label3: '#AEAEB2',       // tertiary / placeholder
-        separator: '#E5E5EA',
-        fill: '#F2F2F7',         // grouped background
-        surface: '#FFFFFF',      // card
-        // Accent
+        // Backed by CSS variables (src/index.css) so light/dark is just a
+        // different value for the same variable — no per-component dark:
+        // classes needed anywhere else in the app.
+        label:  'rgb(var(--color-label) / <alpha-value>)',
+        label2: 'rgb(var(--color-label2) / <alpha-value>)',
+        label3: 'rgb(var(--color-label3) / <alpha-value>)',
+        separator: 'rgb(var(--color-separator) / <alpha-value>)',
+        fill:    'rgb(var(--color-fill) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
         violet: {
-          DEFAULT: '#6E56CF',
-          hover: '#5F48BC',
-          soft: '#F1EDFC'
+          DEFAULT: 'rgb(var(--color-violet) / <alpha-value>)',
+          hover:   'rgb(var(--color-violet-hover) / <alpha-value>)',
+          soft:    'rgb(var(--color-violet-soft) / <alpha-value>)'
         },
-        danger: '#D93843'
+        danger: 'rgb(var(--color-danger) / <alpha-value>)'
       },
       fontFamily: {
         sans: [

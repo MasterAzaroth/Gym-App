@@ -8,6 +8,7 @@ import {
   listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout,
   deleteWorkout
 } from '../lib/db'
+import { usePeekRestTimer, formatClock } from '../lib/restTimer'
 
 export default function Training() {
   const { user } = useAuth()
@@ -15,6 +16,7 @@ export default function Training() {
   const location = useLocation()
   const [tab, setTab] = useState('history')
   const [active, setActive] = useState(null)
+  const restPeek = usePeekRestTimer()
 
   // Picking "Start a workout" from the nav bar's quick-add has nowhere to
   // start a specific routine from, so it lands here instead.
@@ -41,7 +43,11 @@ export default function Training() {
       {active && (
         <Card className="mb-5 flex items-center justify-between gap-3 p-4">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-label2">Workout in progress</p>
+            <p className="text-[13px] font-medium text-label2 tnum">
+              {restPeek.active && restPeek.workoutId === active.id
+                ? `Resting · ${formatClock(restPeek.remaining)}`
+                : 'Workout in progress'}
+            </p>
             <p className="truncate text-[17px] font-semibold">
               {active.name ?? active.routine?.name ?? 'Session'}
             </p>

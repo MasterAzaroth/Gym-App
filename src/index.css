@@ -2,10 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { --nav-row: 52px; }
+:root {
+  --nav-row: 52px;
+
+  /* iOS greyscale, light */
+  --color-label:  28 28 30;     /* #1C1C1E — primary text */
+  --color-label2: 110 110 115;  /* #6E6E73 — secondary text */
+  --color-label3: 174 174 178;  /* #AEAEB2 — tertiary / placeholder */
+  --color-separator: 229 229 234; /* #E5E5EA */
+  --color-fill:    242 242 247; /* #F2F2F7 — grouped background */
+  --color-surface: 255 255 255; /* #FFFFFF — card */
+  /* Accent */
+  --color-violet:       110 86 207;  /* #6E56CF */
+  --color-violet-hover: 95 72 188;   /* #5F48BC */
+  --color-violet-soft:  241 237 252; /* #F1EDFC */
+  --color-danger: 217 56 67;    /* #D93843 */
+}
+
+:root.dark {
+  /* iOS greyscale, dark — grouped background goes to true black (OLED-friendly),
+     cards sit one step up so they still read as "grouped" against it. */
+  --color-label:  255 255 255;  /* #FFFFFF */
+  --color-label2: 152 152 157;  /* #98989D */
+  --color-label3: 99 99 102;    /* #636366 */
+  --color-separator: 56 56 58;  /* #38383A */
+  --color-fill:    0 0 0;       /* #000000 */
+  --color-surface: 28 28 30;    /* #1C1C1E */
+  /* Accent — same hue, slightly lifted so it still pops off black */
+  --color-violet:       134 114 224; /* #8672E0 */
+  --color-violet-hover: 154 137 230; /* #9A89E6 */
+  --color-violet-soft:  43 36 68;    /* #2B2444 */
+  --color-danger: 255 69 58;    /* #FF453A */
+}
 
 html, body, #root { height: 100%; }
-html { background-color: #F2F2F7; }
+html { background-color: rgb(var(--color-fill)); }
 
 body {
   @apply bg-fill text-label antialiased;
@@ -40,7 +71,7 @@ body {
 .tnum { font-variant-numeric: tabular-nums; }
 
 :focus-visible {
-  outline: 2px solid #6E56CF;
+  outline: 2px solid rgb(var(--color-violet));
   outline-offset: 2px;
 }
 

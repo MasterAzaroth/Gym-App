@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Button, Spinner, ErrorNote } from '../components/ui'
 import {
   getWorkout, getRoutine, finishWorkout, deleteWorkout, addSet, updateSet, deleteSet
 } from '../lib/db'
+import { useRestTimer, formatClock } from '../lib/restTimer'
 
 export default function ActiveWorkout() {
   const { id } = useParams()
@@ -18,7 +19,7 @@ export default function ActiveWorkout() {
   const [pendingExtra, setPendingExtra] = useState({}) // { [exerciseId]: number[] } — added but not yet logged
   const [activeExerciseId, setActiveExerciseId] = useState(null)
 
-  const timer = useRestTimer()
+  const timer = useRestTimer(id)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -83,6 +84,7 @@ export default function ActiveWorkout() {
     setFinishing(true)
     try {
       await finishWorkout(workout.id)
+      timer.stop()
       navigate(`/train/workout/${workout.id}`, { replace: true })
     } catch (e) {
       setError(e.message)
@@ -94,6 +96,7 @@ export default function ActiveWorkout() {
     if (!confirm('Cancel this workout? Everything logged so far will be deleted.')) return
     try {
       await deleteWorkout(workout.id)
+      timer.stop()
       navigate('/train', { replace: true })
     } catch (e) {
       setError(e.message)
@@ -105,17 +108,23 @@ export default function ActiveWorkout() {
 
   return (
     <>
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium text-label2">In progress</p>
-          <h1 className="truncate text-[28px] font-bold tracking-[-0.02em]">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <button
+          onClick={() => navigate('/train')}
+          aria-label="Leave workout — it keeps running in the background"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-label2 shadow-card"
+        >
+          <XIcon />
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <h1 className="truncate text-[17px] font-bold tracking-[-0.02em]">
             {workout.name ?? 'Workout'}
           </h1>
-          <p className="mt-0.5 text-[13px] text-label2 tnum">
+          <p className="text-[12px] text-label2 tnum">
             <ElapsedMinutes since={workout.started_at} /> min
           </p>
         </div>
-        <button onClick={cancelWorkout} className="shrink-0 text-[15px] text-danger">
+        <button onClick={cancelWorkout} className="shrink-0 text-[13px] font-medium text-danger">
           Cancel
         </button>
       </div>
@@ -148,18 +157,14 @@ export default function ActiveWorkout() {
         />
       )}
 
-      <div className="mt-6">
-        <Button onClick={finish} disabled={finishing}>
-          {finishing ? 'Finishing…' : 'Finish workout'}
-        </Button>
-      </div>
-
-      {timer.active && (
-        <div
-          className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 pt-3 backdrop-blur-sm"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
-        >
-          <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+      {/* Finish stays reachable without scrolling — the rest timer, when
+          running, sits directly above it in the same fixed footer. */}
+      <div
+        className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 backdrop-blur-sm"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+      >
+        {timer.active && (
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3 border-b border-separator py-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
               <p className="text-[22px] font-bold tnum">{formatClock(timer.remaining)}</p>
@@ -179,8 +184,13 @@ export default function ActiveWorkout() {
               </button>
             </div>
           </div>
+        )}
+        <div className="mx-auto max-w-md py-3">
+          <Button onClick={finish} disabled={finishing}>
+            {finishing ? 'Finishing…' : 'Finish workout'}
+          </Button>
         </div>
-      )}
+      </div>
     </>
   )
 }
@@ -417,46 +427,6 @@ function SetInputRow({ slot, exerciseId, onLog, onEdit, onDone }) {
   )
 }
 
-/* -------------------------------------------------------------------- rest timer */
-
-/** Counts down from an absolute end-time rather than decrementing a counter,
-    so it stays correct if the tab is backgrounded and JS timers get throttled. */
-function useRestTimer() {
-  const [endAt, setEndAt] = useState(null)
-  const [now, setNow] = useState(Date.now())
-  const firedRef = useRef(false)
-
-  useEffect(() => {
-    if (!endAt) return
-    firedRef.current = false
-    const id = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(id)
-  }, [endAt])
-
-  const remaining = endAt ? Math.max(0, Math.ceil((endAt - now) / 1000)) : 0
-
-  useEffect(() => {
-    if (endAt && remaining === 0 && !firedRef.current) {
-      firedRef.current = true
-      navigator.vibrate?.(200)
-    }
-  }, [remaining, endAt])
-
-  return {
-    active: Boolean(endAt),
-    remaining,
-    start: (seconds) => setEndAt(Date.now() + seconds * 1000),
-    stop: () => setEndAt(null),
-    addTime: (delta) => setEndAt((e) => (e ? e + delta * 1000 : e))
-  }
-}
-
-function formatClock(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 function ElapsedMinutes({ since }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -470,6 +440,15 @@ function CheckIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )

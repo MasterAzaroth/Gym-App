@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import {
-  PageTitle, Card, Group, Row, Button, Sheet, Field, SelectField,
+  PageTitle, Card, Group, Row, Button, Sheet, Field, SelectField, Segmented,
   Spinner, ErrorNote, Logo, useForm
 } from '../components/ui'
 import WeightLogSheet from '../components/WeightLogSheet'
@@ -16,6 +17,7 @@ const TIERS = {
 
 export default function Profile() {
   const { user, signOut } = useAuth()
+  const { preference, setTheme } = useTheme()
   const [profile, setProfile] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
@@ -127,6 +129,19 @@ export default function Profile() {
           <Row label="Units"       value={profile?.unit === 'lb' ? 'Pounds' : 'Kilograms'} onClick={() => setSheet('training')} />
           <Row label="Bar weight"  value={`${profile?.bar_kg ?? 20} kg`}                   onClick={() => setSheet('training')} />
         </Group>
+      </Section>
+
+      {/* Appearance */}
+      <Section title="Appearance">
+        <Segmented
+          value={preference}
+          onChange={setTheme}
+          options={[
+            { value: 'light',  label: 'Light' },
+            { value: 'dark',   label: 'Dark' },
+            { value: 'system', label: 'Auto' }
+          ]}
+        />
       </Section>
 
       {/* Account */}
