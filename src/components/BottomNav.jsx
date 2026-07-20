@@ -10,15 +10,17 @@ const TABS = [
   { to: '/profile',   label: 'Profile',   icon: IconProfile }
 ]
 
+/**
+ * Not fixed — the last row of the shell's flex column. It can't drift, because
+ * it isn't positioned against the viewport at all.
+ */
 export default function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-separator bg-surface/92 backdrop-blur-xl"
+      className="shrink-0 border-t border-separator bg-surface"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >
-      {/* The row is a fixed height; the safe-area inset is a sibling below it,
-          painted the same colour. That keeps the home-indicator gap from
-          reading as a separate pale band under the labels. */}
       <ul className="mx-auto flex max-w-md" style={{ height: 'var(--nav-row)' }}>
         {TABS.map(({ to, label, end, icon: Icon }) => (
           <li key={to} className="flex-1">
@@ -44,19 +46,17 @@ export default function BottomNav() {
           </li>
         ))}
       </ul>
-      <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
     </nav>
   )
 }
 
 const base = {
   width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none',
-  stroke: 'currentColor', strokeWidth: 1.7,
-  strokeLinecap: 'round', strokeLinejoin: 'round'
+  stroke: 'currentColor', strokeLinecap: 'round', strokeLinejoin: 'round'
 }
 
-/* The active tab thickens its stroke rather than swapping to a filled glyph —
-   subtler, and it keeps the icon's silhouette stable between states. */
+/* Active tab thickens its stroke instead of swapping to a filled glyph, so the
+   silhouette stays put and the change reads as emphasis. */
 const w = (active) => ({ ...base, strokeWidth: active ? 2.2 : 1.7 })
 
 function IconLearn({ active }) {

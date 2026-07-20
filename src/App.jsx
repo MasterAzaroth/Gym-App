@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import AppShell from './components/AppShell'
 import Auth from './pages/Auth'
@@ -10,14 +9,6 @@ import RoutineBuilder from './pages/RoutineBuilder'
 import WorkoutDetail from './pages/WorkoutDetail'
 import Nutrition from './pages/Nutrition'
 import Profile from './pages/Profile'
-
-/* Without this, switching tabs keeps the old scroll offset and you land
-   halfway down a page you've never seen. */
-function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
-  return null
-}
 
 export default function App() {
   const { user, loading, isConfigured } = useAuth()
@@ -34,7 +25,6 @@ export default function App() {
 
   return (
     <>
-      <ScrollToTop />
       <Routes>
         <Route path="/signin" element={signedIn ? <Navigate to="/" replace /> : <Auth />} />
         <Route element={signedIn ? <AppShell /> : <Navigate to="/signin" replace />}>
