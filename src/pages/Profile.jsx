@@ -216,7 +216,11 @@ function AccountSheet({ open, profile, onClose, onSaved }) {
         goal:         form.goal || null
       })
       onSaved()
-    } catch (e) { setError(e.message); setSaving(false) }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

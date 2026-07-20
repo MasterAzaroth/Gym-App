@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, Macro } from './ui'
+import { Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, Macro, useAutoFocus } from './ui'
 import { addNutritionEntry, listFoods } from '../lib/db'
 import { scaleFood } from '../lib/nutrition'
 
@@ -17,6 +17,9 @@ export default function FoodAddSheet({ open, presetTime, userId, isoDate, daySta
   const [loggedTime, setLoggedTime] = useState(presetTime)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+
+  const searchRef = useAutoFocus(open && !picked)
+  const amountRef = useAutoFocus(open && Boolean(picked))
 
   // Reset once per opening — not on every keystroke in the search box below.
   useEffect(() => {
@@ -78,10 +81,10 @@ export default function FoodAddSheet({ open, presetTime, userId, isoDate, daySta
         <>
           <div className="sticky top-0 -mx-5 bg-fill px-5 pb-3 pt-1">
             <input
+              ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search foods"
-              autoFocus
               className="w-full rounded-xl bg-surface px-4 py-3 text-[17px] placeholder:text-label3 focus:outline-none"
             />
           </div>
@@ -117,12 +120,12 @@ export default function FoodAddSheet({ open, presetTime, userId, isoDate, daySta
 
           <Group>
             <Field
+              ref={amountRef}
               label="Amount"
               type="number"
               inputMode="decimal"
               suffix="g"
               value={grams}
-              autoFocus
               onChange={(e) => setGrams(e.target.value)}
             />
             <Field

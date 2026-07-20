@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, forwardRef } from 'react'
 import { createPortal } from 'react-dom'
 
 /* iOS grammar: grouped background, white cards, generous radii, one accent,
@@ -11,6 +11,23 @@ export function useForm(open, initial) {
   useEffect(() => { if (open) setForm(initial) }, [open])   // eslint-disable-line
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   return [form, set, setForm]
+}
+
+/**
+ * Focuses an element ~350ms after `active` turns true — long enough for a
+ * Sheet's slide-up transform to finish. A plain `autoFocus` fires the instant
+ * the input mounts, which is the same instant the sheet starts animating; the
+ * keyboard then opens while iOS is still mid-transform, and the two motions
+ * fighting over the same layer is what caused the sheet to render distorted.
+ */
+export function useAutoFocus(active, delay = 350) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!active) return
+    const t = setTimeout(() => ref.current?.focus(), delay)
+    return () => clearTimeout(t)
+  }, [active, delay])
+  return ref
 }
 
 /** A labelled stat number — kcal/protein/carbs/fat readouts in the food sheets. */
@@ -94,18 +111,19 @@ export function Group({ children, className = '' }) {
   )
 }
 
-export function Field({ label, suffix, ...props }) {
+export const Field = forwardRef(function Field({ label, suffix, ...props }, ref) {
   return (
     <label className="flex items-center gap-3 px-4">
       <span className="w-[104px] shrink-0 py-3.5 text-[17px]">{label}</span>
       <input
+        ref={ref}
         className="min-w-0 flex-1 bg-transparent py-3.5 text-[17px] placeholder:text-label3 focus:outline-none"
         {...props}
       />
       {suffix && <span className="shrink-0 text-[15px] text-label3">{suffix}</span>}
     </label>
   )
-}
+})
 
 export function SelectField({ label, options, ...props }) {
   return (

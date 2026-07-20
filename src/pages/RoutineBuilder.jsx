@@ -253,6 +253,7 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
       onSaved()
     } catch (e) {
       setError(e.message)
+    } finally {
       setSaving(false)
     }
   }

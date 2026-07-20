@@ -24,7 +24,11 @@ export default function WeightLogSheet({ open, userId, latest, onClose, onSaved 
         bodyfat_pct: form.bodyfat_pct ? Number(form.bodyfat_pct) : null
       })
       onSaved()
-    } catch (e) { setError(e.message); setSaving(false) }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

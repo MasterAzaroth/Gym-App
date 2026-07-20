@@ -189,6 +189,86 @@ export async function getWorkout(workoutId) {
   return data
 }
 
+/** The one workout a user can have in flight — started, not yet finished.
+    Training checks this on load so a session survives backgrounding the app
+    mid-workout instead of getting silently orphaned. */
+export async function getActiveWorkout(userId) {
+  guard()
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('*, routine:routines(name)')
+    .eq('user_id', userId)
+    .is('finished_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function createWorkout(userId, routineId, name) {
+  guard()
+  const { data, error } = await supabase
+    .from('workouts')
+    .insert({ user_id: userId, routine_id: routineId, name })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function finishWorkout(workoutId) {
+  guard()
+  const { data, error } = await supabase
+    .from('workouts')
+    .update({ finished_at: new Date().toISOString() })
+    .eq('id', workoutId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** Abandons a workout entirely (e.g. started by mistake) — cascades to its sets. */
+export async function deleteWorkout(workoutId) {
+  guard()
+  const { error } = await supabase.from('workouts').delete().eq('id', workoutId)
+  if (error) throw error
+}
+
+export async function addSet(workoutId, exerciseId, setIndex, payload) {
+  guard()
+  const { data, error } = await supabase
+    .from('sets')
+    .insert({
+      workout_id: workoutId,
+      exercise_id: exerciseId,
+      set_index: setIndex,
+      weight_kg: payload.weight_kg,
+      reps: payload.reps,
+      rpe: payload.rpe ?? null,
+      is_warmup: Boolean(payload.is_warmup)
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateSet(setId, patch) {
+  guard()
+  const { data, error } = await supabase
+    .from('sets').update(patch).eq('id', setId).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSet(setId) {
+  guard()
+  const { error } = await supabase.from('sets').delete().eq('id', setId)
+  if (error) throw error
+}
+
 /* ---------------------------------------------------------------- nutrition */
 export async function listFoods(query = '') {
   guard()

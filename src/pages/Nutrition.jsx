@@ -267,6 +267,7 @@ function EditSheet({ entry, dayStart, dayEnd, onClose, onSaved }) {
       onSaved()
     } catch (e) {
       setError(e.message)
+    } finally {
       setSaving(false)
     }
   }

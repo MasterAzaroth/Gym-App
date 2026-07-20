@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
-  PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field
+  PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field, useAutoFocus
 } from '../components/ui'
 import { listWorkouts, listRoutines, createRoutine, deleteRoutine } from '../lib/db'
 
@@ -101,6 +101,7 @@ function Routines({ userId, onOpen }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
+  const nameRef = useAutoFocus(sheetOpen)
 
   const load = useCallback(async () => {
     if (!userId) return
@@ -190,10 +191,10 @@ function Routines({ userId, onOpen }) {
       >
         <Group className="mt-2">
           <Field
+            ref={nameRef}
             label="Name"
             placeholder="Upper A"
             value={name}
-            autoFocus
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           />
