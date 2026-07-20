@@ -155,7 +155,10 @@ export default function ActiveWorkout() {
       </div>
 
       {timer.active && (
-        <div className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 py-3 backdrop-blur-sm">
+        <div
+          className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 pt-3 backdrop-blur-sm"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+        >
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
