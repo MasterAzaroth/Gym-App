@@ -59,6 +59,25 @@ export function formatHour(h) {
   return d.toLocaleTimeString(undefined, { hour: 'numeric' })
 }
 
+/** The time to start a new entry at: now, if that falls inside the day
+    window, otherwise the start of the window. */
+export function defaultLoggedTime(dayStart, dayEnd) {
+  const now = nowTime()
+  return now >= dayStart && now <= dayEnd ? now : dayStart
+}
+
+/** A profile's day window, falling back to the default if it's missing or
+    backwards (an end-before-start window breaks the hourly timeline). */
+export function dayWindow(profile) {
+  let start = shortTime(profile?.day_start_time) || DEFAULT_DAY_START
+  let end   = shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
+  if (hourOf(end) < hourOf(start)) {
+    start = DEFAULT_DAY_START
+    end   = DEFAULT_DAY_END
+  }
+  return [start, end]
+}
+
 /** Local YYYY-MM-DD. Never toISOString() here — it shifts to UTC and files your
     late dinner under tomorrow. */
 export function toISODate(date) {

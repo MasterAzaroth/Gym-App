@@ -1,20 +1,19 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
-  Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, Chevron
+  Card, Group, Button, Sheet, Field, Spinner, ErrorNote, Chevron, Macro
 } from '../components/ui'
+import FoodAddSheet from '../components/FoodAddSheet'
 import {
-  listNutrition, addNutritionEntry, updateNutritionEntry, deleteNutritionEntry, listFoods
+  listNutrition, updateNutritionEntry, deleteNutritionEntry
 } from '../lib/db'
 import {
-  scaleFood, sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS,
-  formatTime, nowTime, shortTime, hourOf, formatHour, DEFAULT_DAY_START, DEFAULT_DAY_END
+  sumEntries, toISODate, addDays, friendlyDate, getWeekDates, WEEKDAY_LETTERS,
+  formatTime, shortTime, hourOf, formatHour, dayWindow
 } from '../lib/nutrition'
 
 export default function Nutrition() {
   const { user, profile } = useAuth()
-  const location = useLocation()
   const [date, setDate] = useState(new Date())
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
@@ -33,21 +32,7 @@ export default function Nutrition() {
   }
 
   // The user's own day window (Profile → Nutrition goals), not midnight–midnight.
-  // Falls back to the default range if it's missing or somehow backwards —
-  // an end-before-start window would otherwise produce zero hour rows and the
-  // whole timeline would silently vanish.
-  let dayStart = shortTime(profile?.day_start_time) || DEFAULT_DAY_START
-  let dayEnd   = shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
-  if (hourOf(dayEnd) < hourOf(dayStart)) {
-    dayStart = DEFAULT_DAY_START
-    dayEnd   = DEFAULT_DAY_END
-  }
-
-  // Arrived from the nav bar's quick-add menu — jump straight into logging food.
-  useEffect(() => {
-    if (location.state?.quickAdd === 'food') setAddAt(defaultLoggedTime(dayStart, dayEnd))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const [dayStart, dayEnd] = dayWindow(profile)
 
   const load = useCallback(async () => {
     if (!user?.id) return
@@ -157,7 +142,7 @@ export default function Nutrition() {
         </section>
       )}
 
-      <AddSheet
+      <FoodAddSheet
         open={Boolean(addAt)}
         presetTime={addAt}
         userId={user?.id}
@@ -190,13 +175,6 @@ function StepButton({ dir, onClick, disabled }) {
       <span className={dir === 'prev' ? 'rotate-180' : ''}><Chevron /></span>
     </button>
   )
-}
-
-/** The time to start a new entry at: now, if that falls inside the user's day
-    window, otherwise the start of the window. */
-function defaultLoggedTime(dayStart, dayEnd) {
-  const now = nowTime()
-  return now >= dayStart && now <= dayEnd ? now : dayStart
 }
 
 /** One hour of the timeline: a time pill with the add button right next to
@@ -237,170 +215,6 @@ function HourRow({ hour, entries, onAdd, onEdit }) {
         ))}
       </div>
     </div>
-  )
-}
-
-/* ---------------------------------------------------------------- add sheet */
-
-function AddSheet({ open, presetTime, userId, isoDate, dayStart, dayEnd, onClose, onSaved }) {
-  const [query, setQuery] = useState('')
-  const [foods, setFoods] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [picked, setPicked] = useState(null)
-  const [grams, setGrams] = useState(100)
-  const [loggedTime, setLoggedTime] = useState(dayStart)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  // Reset once per opening — not on every keystroke in the search box below.
-  useEffect(() => {
-    if (!open) return
-    setPicked(null)
-    setQuery('')
-    setError(null)
-    setLoggedTime(presetTime || defaultLoggedTime(dayStart, dayEnd))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    setLoading(true)
-    listFoods(query).then(setFoods).catch((e) => setError(e.message)).finally(() => setLoading(false))
-  }, [open, query])
-
-  useEffect(() => {
-    if (picked?.serving_grams) setGrams(picked.serving_grams)
-    else if (picked) setGrams(100)
-  }, [picked])
-
-  const macros = picked ? scaleFood(picked, grams) : null
-
-  async function save() {
-    setSaving(true)
-    setError(null)
-    try {
-      await addNutritionEntry(userId, {
-        food_id: picked.id,
-        entry_date: isoDate,
-        logged_time: loggedTime,
-        name: picked.name,
-        grams: Number(grams),
-        ...macros
-      })
-      onSaved()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title={picked ? 'Portion' : 'Add food'}
-      footer={picked && (
-        <Button onClick={save} disabled={saving || !grams || !loggedTime}>
-          {saving ? 'Adding…' : `Add ${macros.kcal} kcal`}
-        </Button>
-      )}
-    >
-      {error && <div className="mb-3"><ErrorNote error={error} /></div>}
-
-      {!picked ? (
-        <>
-          <div className="sticky top-0 -mx-5 bg-fill px-5 pb-3 pt-1">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search foods"
-              autoFocus
-              className="w-full rounded-xl bg-surface px-4 py-3 text-[17px] placeholder:text-label3 focus:outline-none"
-            />
-          </div>
-
-          {loading ? <Spinner /> : foods.length === 0 ? (
-            <p className="py-10 text-center text-[15px] leading-relaxed text-label2">
-              No foods match "{query}".<br />
-              Custom foods are coming — for now, search the shared library.
-            </p>
-          ) : (
-            <Group>
-              {foods.map((f) => (
-                <Row
-                  key={f.id}
-                  label={f.name}
-                  sub={`${f.kcal_per_100g} kcal · P ${f.protein_per_100g} · C ${f.carbs_per_100g} · F ${f.fat_per_100g} per 100 g`}
-                  onClick={() => setPicked(f)}
-                />
-              ))}
-            </Group>
-          )}
-        </>
-      ) : (
-        <>
-          <Card className="mb-4 p-4">
-            <h3 className="text-[17px] font-semibold">{picked.name}</h3>
-            {picked.serving_name && (
-              <p className="mt-0.5 text-[13px] text-label2">
-                {picked.serving_name} ≈ {picked.serving_grams} g
-              </p>
-            )}
-          </Card>
-
-          <Group>
-            <Field
-              label="Amount"
-              type="number"
-              inputMode="decimal"
-              suffix="g"
-              value={grams}
-              autoFocus
-              onChange={(e) => setGrams(e.target.value)}
-            />
-            <Field
-              label="Time"
-              type="time"
-              min={dayStart}
-              max={dayEnd}
-              value={loggedTime}
-              onChange={(e) => setLoggedTime(e.target.value)}
-            />
-          </Group>
-
-          {picked.serving_grams && (
-            <div className="mt-3 flex gap-2">
-              {[1, 2, 3].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setGrams(picked.serving_grams * n)}
-                  className="flex-1 rounded-lg bg-surface py-2 text-[15px] font-medium text-violet shadow-card"
-                >
-                  {n}× serving
-                </button>
-              ))}
-            </div>
-          )}
-
-          <Card className="mt-4 p-4">
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <Macro label="kcal" value={macros.kcal} />
-              <Macro label="Protein" value={`${macros.protein_g}g`} />
-              <Macro label="Carbs" value={`${macros.carbs_g}g`} />
-              <Macro label="Fat" value={`${macros.fat_g}g`} />
-            </div>
-          </Card>
-
-          <button
-            onClick={() => setPicked(null)}
-            className="mt-4 w-full text-center text-[15px] font-medium text-violet"
-          >
-            Pick a different food
-          </button>
-        </>
-      )}
-    </Sheet>
   )
 }
 
@@ -504,15 +318,6 @@ function EditSheet({ entry, dayStart, dayEnd, onClose, onSaved }) {
         <Button variant="danger" onClick={remove} disabled={saving}>Remove from day</Button>
       </div>
     </Sheet>
-  )
-}
-
-function Macro({ label, value }) {
-  return (
-    <div>
-      <p className="text-[17px] font-semibold tnum">{value}</p>
-      <p className="mt-0.5 text-[11px] text-label2">{label}</p>
-    </div>
   )
 }
 

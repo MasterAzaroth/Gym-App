@@ -1,8 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /* iOS grammar: grouped background, white cards, generous radii, one accent,
    hairline separators, almost no borders. */
+
+/** Shared form-state helper for sheets: resets to `initial` each time the
+    sheet opens, otherwise holds edits locally until saved. */
+export function useForm(open, initial) {
+  const [form, setForm] = useState({})
+  useEffect(() => { if (open) setForm(initial) }, [open])   // eslint-disable-line
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  return [form, set, setForm]
+}
+
+/** A labelled stat number — kcal/protein/carbs/fat readouts in the food sheets. */
+export function Macro({ label, value }) {
+  return (
+    <div>
+      <p className="text-[17px] font-semibold tnum">{value}</p>
+      <p className="mt-0.5 text-[11px] text-label2">{label}</p>
+    </div>
+  )
+}
 
 export function PageTitle({ eyebrow, children, action }) {
   return (
@@ -180,14 +199,38 @@ export function ErrorNote({ error, onRetry }) {
 
 /** Bottom sheet. Slides up, dismisses on backdrop tap or Escape. */
 export function Sheet({ open, onClose, title, children, footer }) {
+  // iOS doesn't resize position:fixed content when the keyboard opens — it
+  // pans the visual viewport instead, so a fixed-height overlay ends up
+  // showing the wrong slice of itself (the field you just tapped can end up
+  // under the keyboard). Tracking visualViewport's height AND scroll offset,
+  // and countering the pan with a matching transform, keeps the sheet locked
+  // to what's actually visible above the keyboard.
+  const [vh, setVh] = useState(null)
+  const [vOffset, setVOffset] = useState(0)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
+
+    const vv = window.visualViewport
+    const update = () => {
+      if (!vv) return
+      setVh(vv.height)
+      setVOffset(vv.offsetTop)
+    }
+    update()
+    vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
+
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
+      setVh(null)
+      setVOffset(0)
     }
   }, [open, onClose])
 
@@ -196,15 +239,16 @@ export function Sheet({ open, onClose, title, children, footer }) {
   // Portaled straight to <body>, outside <main>'s overflow-y-auto — iOS Safari
   // clips/contains position:fixed descendants to a scrolling ancestor instead
   // of the real screen, which left the sheet's footer sitting under the nav.
-  // Keyboard-avoidance itself comes from the viewport meta's
-  // interactive-widget=resizes-content (index.html), which makes 100dvh
-  // actually shrink when the keyboard opens — a JS visualViewport-resize
-  // version of this was tried and caused its own rendering glitches with the
-  // backdrop's blur.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div
+      className="fixed inset-x-0 top-0 z-50 flex flex-col justify-end"
+      style={{
+        height: vh ? `${vh}px` : '100dvh',
+        transform: vOffset ? `translateY(${vOffset}px)` : undefined
+      }}
+    >
       <div
-        className="backdrop-enter absolute inset-0 bg-label/30 backdrop-blur-[2px]"
+        className="backdrop-enter absolute inset-0 bg-label/30"
         onClick={onClose}
         aria-hidden="true"
       />

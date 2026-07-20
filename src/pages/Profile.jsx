@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   PageTitle, Card, Group, Row, Button, Sheet, Field, SelectField,
-  Spinner, ErrorNote, Logo
+  Spinner, ErrorNote, Logo, useForm
 } from '../components/ui'
-import { getProfile, updateProfile, listBodyMetrics, upsertBodyMetric } from '../lib/db'
-import { toISODate, formatTime, shortTime, DEFAULT_DAY_START, DEFAULT_DAY_END } from '../lib/nutrition'
+import WeightLogSheet from '../components/WeightLogSheet'
+import { getProfile, updateProfile, listBodyMetrics } from '../lib/db'
+import { formatTime, shortTime, DEFAULT_DAY_START, DEFAULT_DAY_END } from '../lib/nutrition'
 
 const TIERS = {
   free:    { name: 'Free',    price: '€0' },
@@ -16,18 +16,11 @@ const TIERS = {
 
 export default function Profile() {
   const { user, signOut } = useAuth()
-  const location = useLocation()
   const [profile, setProfile] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'weight'
-
-  // Arrived from the nav bar's quick-add menu — jump straight into logging weight.
-  useEffect(() => {
-    if (location.state?.quickAdd === 'weight') setSheet('weight')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const load = useCallback(async () => {
     if (!user?.id) return
@@ -179,7 +172,7 @@ export default function Profile() {
         onClose={() => setSheet(null)}
         onSaved={() => { setSheet(null); load() }}
       />
-      <WeightSheet
+      <WeightLogSheet
         open={sheet === 'weight'} userId={user?.id} latest={latest}
         onClose={() => setSheet(null)}
         onSaved={() => { setSheet(null); load() }}
@@ -200,13 +193,6 @@ function Section({ title, children }) {
 }
 
 /* ------------------------------------------------------------------- sheets */
-
-function useForm(open, initial) {
-  const [form, setForm] = useState({})
-  useEffect(() => { if (open) setForm(initial) }, [open])   // eslint-disable-line
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  return [form, set, setForm]
-}
 
 function AccountSheet({ open, profile, onClose, onSaved }) {
   const [form, set] = useForm(open, {
@@ -424,41 +410,3 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
   )
 }
 
-function WeightSheet({ open, userId, latest, onClose, onSaved }) {
-  const [form, set] = useForm(open, {
-    weight_kg:   latest?.weight_kg ?? '',
-    bodyfat_pct: latest?.bodyfat_pct ?? '',
-    measured_on: toISODate(new Date())
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  async function save() {
-    setSaving(true); setError(null)
-    try {
-      await upsertBodyMetric(userId, form.measured_on, {
-        weight_kg:   form.weight_kg ? Number(form.weight_kg) : null,
-        bodyfat_pct: form.bodyfat_pct ? Number(form.bodyfat_pct) : null
-      })
-      onSaved()
-    } catch (e) { setError(e.message); setSaving(false) }
-  }
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Log weight"
-           footer={<Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>}>
-      {error && <div className="mb-3"><ErrorNote error={error} /></div>}
-      <Group className="mt-2">
-        <Field label="Date" type="date" value={form.measured_on ?? ''} onChange={set('measured_on')} />
-        <Field label="Weight" type="number" inputMode="decimal" step="0.1" suffix="kg"
-               value={form.weight_kg ?? ''} onChange={set('weight_kg')} />
-        <Field label="Body fat" type="number" inputMode="decimal" step="0.1" suffix="%"
-               value={form.bodyfat_pct ?? ''} onChange={set('bodyfat_pct')} />
-      </Group>
-      <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
-        Weigh yourself at the same time each day, ideally first thing. Day-to-day swings are water,
-        not fat — the trend over weeks is what counts.
-      </p>
-    </Sheet>
-  )
-}

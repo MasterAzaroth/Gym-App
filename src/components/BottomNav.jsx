@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { Sheet, Group, Row } from './ui'
+import FoodAddSheet from './FoodAddSheet'
+import WeightLogSheet from './WeightLogSheet'
+import { dayWindow, defaultLoggedTime, toISODate } from '../lib/nutrition'
 
 const LEFT_TABS = [
   { to: '/',      label: 'Insights', icon: IconInsights, end: true },
@@ -15,16 +19,16 @@ const RIGHT_TABS = [
 /* Last row of the shell's flex column. Not positioned, so nothing can shift it. */
 export default function BottomNav() {
   const navigate = useNavigate()
+  const { user, profile } = useAuth()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [foodOpen, setFoodOpen] = useState(false)
+  const [weightOpen, setWeightOpen] = useState(false)
 
-  function goQuickAdd(to, quickAdd) {
-    setQuickAddOpen(false)
-    navigate(to, { state: { quickAdd } })
-  }
+  const [dayStart, dayEnd] = dayWindow(profile)
 
   return (
     <nav
-      className="shrink-0 border-t border-separator bg-surface"
+      className="relative z-10 shrink-0 border-t border-separator bg-surface"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Main"
     >
@@ -46,10 +50,35 @@ export default function BottomNav() {
         {RIGHT_TABS.map((tab) => <NavTab key={tab.to} {...tab} />)}
       </ul>
 
-      <QuickAddSheet
-        open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        onPick={goQuickAdd}
+      <Sheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Quick add">
+        <Group className="mt-2">
+          <Row label="Log food" onClick={() => { setQuickAddOpen(false); setFoodOpen(true) }} />
+          <Row label="Log weight" onClick={() => { setQuickAddOpen(false); setWeightOpen(true) }} />
+          {/* No live workout-logging flow exists yet — closest useful spot is
+              the routines list, so this one still navigates. */}
+          <Row
+            label="Start a workout"
+            onClick={() => { setQuickAddOpen(false); navigate('/train', { state: { quickAdd: 'workout' } }) }}
+          />
+        </Group>
+      </Sheet>
+
+      {/* Logs directly, from wherever you are — no navigation, no page to visit first. */}
+      <FoodAddSheet
+        open={foodOpen}
+        presetTime={defaultLoggedTime(dayStart, dayEnd)}
+        userId={user?.id}
+        isoDate={toISODate(new Date())}
+        dayStart={dayStart}
+        dayEnd={dayEnd}
+        onClose={() => setFoodOpen(false)}
+        onSaved={() => setFoodOpen(false)}
+      />
+      <WeightLogSheet
+        open={weightOpen}
+        userId={user?.id}
+        onClose={() => setWeightOpen(false)}
+        onSaved={() => setWeightOpen(false)}
       />
     </nav>
   )
@@ -78,20 +107,6 @@ function NavTab({ to, label, end, icon: Icon }) {
         )}
       </NavLink>
     </li>
-  )
-}
-
-/** Where the center plus button leads. Each destination page checks
-    location.state.quickAdd on arrival and opens its own add flow. */
-function QuickAddSheet({ open, onClose, onPick }) {
-  return (
-    <Sheet open={open} onClose={onClose} title="Quick add">
-      <Group className="mt-2">
-        <Row label="Log food" onClick={() => onPick('/nutrition', 'food')} />
-        <Row label="Log weight" onClick={() => onPick('/profile', 'weight')} />
-        <Row label="Start a workout" onClick={() => onPick('/train', 'workout')} />
-      </Group>
-    </Sheet>
   )
 }
 
