@@ -21,7 +21,6 @@ export default function Nutrition() {
   const [editing, setEditing] = useState(null)         // entry being edited
 
   const iso = toISODate(date)
-  const isFuture = iso > toISODate(new Date())
 
   const goals = {
     kcal:    profile?.goal_kcal ?? 2500,
@@ -47,7 +46,6 @@ export default function Nutrition() {
 
   const totals = useMemo(() => sumEntries(entries), [entries])
   const weekDates = useMemo(() => getWeekDates(date), [date])
-  const todayISO = toISODate(new Date())
 
   return (
     <>
@@ -60,7 +58,7 @@ export default function Nutrition() {
             {date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <StepButton dir="next" onClick={() => setDate((d) => addDays(d, 1))} disabled={isFuture} />
+        <StepButton dir="next" onClick={() => setDate((d) => addDays(d, 1))} />
       </div>
 
       {/* Week strip — one pill per day, letters only */}
@@ -68,18 +66,15 @@ export default function Nutrition() {
         {weekDates.map((d, i) => {
           const dISO = toISODate(d)
           const selected = dISO === iso
-          const future = dISO > todayISO
           return (
             <button
               key={dISO}
-              onClick={() => !future && setDate(d)}
-              disabled={future}
+              onClick={() => setDate(d)}
               aria-current={selected ? 'date' : undefined}
               aria-label={d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
               className={[
                 'aspect-square flex-1 rounded-full text-[13px] font-semibold transition-colors',
-                selected ? 'bg-violet text-white' : 'bg-surface text-label2 shadow-card',
-                future ? 'opacity-30' : ''
+                selected ? 'bg-violet text-white' : 'bg-surface text-label2 shadow-card'
               ].join(' ')}
             >
               {WEEKDAY_LETTERS[i]}
