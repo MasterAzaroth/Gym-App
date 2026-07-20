@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 /* iOS grammar: grouped background, white cards, generous radii, one accent,
@@ -180,32 +180,14 @@ export function ErrorNote({ error, onRetry }) {
 
 /** Bottom sheet. Slides up, dismisses on backdrop tap or Escape. */
 export function Sheet({ open, onClose, title, children, footer }) {
-  // iOS keeps position:fixed elements sized to the layout viewport when the
-  // keyboard opens — it doesn't shrink to the visible area the way the
-  // keyboard-avoiding content does. That left the top of the sheet (the
-  // search field, in practice) shifted off-screen until the keyboard closed.
-  // Tracking visualViewport and sizing the sheet to it keeps it matched to
-  // whatever's actually visible above the keyboard.
-  const [viewportHeight, setViewportHeight] = useState(null)
-
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
-
-    const vv = window.visualViewport
-    const updateHeight = () => vv && setViewportHeight(vv.height)
-    updateHeight()
-    vv?.addEventListener('resize', updateHeight)
-    vv?.addEventListener('scroll', updateHeight)
-
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
-      vv?.removeEventListener('resize', updateHeight)
-      vv?.removeEventListener('scroll', updateHeight)
-      setViewportHeight(null)
     }
   }, [open, onClose])
 
@@ -214,11 +196,13 @@ export function Sheet({ open, onClose, title, children, footer }) {
   // Portaled straight to <body>, outside <main>'s overflow-y-auto — iOS Safari
   // clips/contains position:fixed descendants to a scrolling ancestor instead
   // of the real screen, which left the sheet's footer sitting under the nav.
+  // Keyboard-avoidance itself comes from the viewport meta's
+  // interactive-widget=resizes-content (index.html), which makes 100dvh
+  // actually shrink when the keyboard opens — a JS visualViewport-resize
+  // version of this was tried and caused its own rendering glitches with the
+  // backdrop's blur.
   return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-50 flex flex-col justify-end"
-      style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
-    >
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <div
         className="backdrop-enter absolute inset-0 bg-label/30 backdrop-blur-[2px]"
         onClick={onClose}
