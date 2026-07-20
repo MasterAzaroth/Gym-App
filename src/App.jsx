@@ -5,6 +5,7 @@ import Auth from './pages/Auth'
 import Insights from './pages/Insights'
 import Training from './pages/Training'
 import RoutineBuilder from './pages/RoutineBuilder'
+import ActiveWorkout from './pages/ActiveWorkout'
 import WorkoutDetail from './pages/WorkoutDetail'
 import Nutrition from './pages/Nutrition'
 import Profile from './pages/Profile'
@@ -30,6 +31,7 @@ export default function App() {
           <Route index element={<Insights />} />
           <Route path="train" element={<Training />} />
           <Route path="train/routine/:id" element={<RoutineBuilder />} />
+          <Route path="train/session/:id" element={<ActiveWorkout />} />
           <Route path="train/workout/:id" element={<WorkoutDetail />} />
           <Route path="nutrition" element={<Nutrition />} />
           <Route path="profile" element={<Profile />} />

@@ -4,24 +4,52 @@ import { useAuth } from '../context/AuthContext'
 import {
   PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field, useAutoFocus
 } from '../components/ui'
-import { listWorkouts, listRoutines, createRoutine, deleteRoutine } from '../lib/db'
+import {
+  listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout
+} from '../lib/db'
 
 export default function Training() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [tab, setTab] = useState('history')
+  const [active, setActive] = useState(null)
 
-  // Arrived from the nav bar's quick-add menu — there's no live workout
-  // logging yet, so the closest useful landing spot is the routines list.
+  // Picking "Start a workout" from the nav bar's quick-add has nowhere to
+  // start a specific routine from, so it lands here instead.
   useEffect(() => {
     if (location.state?.quickAdd === 'workout') setTab('routines')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const loadActive = useCallback(async () => {
+    if (!user?.id) return
+    try {
+      setActive(await getActiveWorkout(user.id))
+    } catch {
+      // Non-critical — the banner just won't show.
+    }
+  }, [user?.id])
+
+  useEffect(() => { loadActive() }, [loadActive])
+
   return (
     <>
       <PageTitle eyebrow="Your work">Training</PageTitle>
+
+      {active && (
+        <Card className="mb-5 flex items-center justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-label2">Workout in progress</p>
+            <p className="truncate text-[17px] font-semibold">
+              {active.name ?? active.routine?.name ?? 'Session'}
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate(`/train/session/${active.id}`)}>
+            Resume
+          </Button>
+        </Card>
+      )}
 
       <Segmented
         value={tab}
@@ -34,7 +62,15 @@ export default function Training() {
 
       {tab === 'history'
         ? <History userId={user?.id} onOpen={(id) => navigate(`/train/workout/${id}`)} />
-        : <Routines userId={user?.id} onOpen={(id) => navigate(`/train/routine/${id}`)} />}
+        : (
+          <Routines
+            userId={user?.id}
+            activeWorkoutId={active?.id}
+            onOpen={(id) => navigate(`/train/routine/${id}`)}
+            onStart={(workoutId) => navigate(`/train/session/${workoutId}`)}
+            onStarted={loadActive}
+          />
+        )}
     </>
   )
 }
@@ -96,11 +132,12 @@ function History({ userId, onOpen }) {
 
 /* ----------------------------------------------------------------- routines */
 
-function Routines({ userId, onOpen }) {
+function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
   const [state, setState] = useState({ loading: true, error: null, routines: [] })
   const [sheetOpen, setSheetOpen] = useState(false)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [starting, setStarting] = useState(false)
   const nameRef = useAutoFocus(sheetOpen)
 
   const load = useCallback(async () => {
@@ -141,6 +178,26 @@ function Routines({ userId, onOpen }) {
     }
   }
 
+  // Only one workout can be in flight at a time — jump into it rather than
+  // starting a second, orphaned one.
+  async function handleStart(routineId, routineName) {
+    if (starting) return
+    setStarting(true)
+    try {
+      if (activeWorkoutId) {
+        onStart(activeWorkoutId)
+        return
+      }
+      const workout = await createWorkout(userId, routineId, routineName)
+      onStarted?.()
+      onStart(workout.id)
+    } catch (e) {
+      setState((s) => ({ ...s, error: e.message }))
+    } finally {
+      setStarting(false)
+    }
+  }
+
   return (
     <>
       {state.loading ? (
@@ -163,12 +220,21 @@ function Routines({ userId, onOpen }) {
                 sub={`${r.exercise_count} ${r.exercise_count === 1 ? 'exercise' : 'exercises'}`}
                 onClick={() => onOpen(r.id)}
                 trailing={
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(r.id, r.name) }}
-                    className="px-2 text-[13px] font-medium text-danger"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleStart(r.id, r.name) }}
+                      disabled={starting}
+                      className="text-[13px] font-semibold text-violet disabled:opacity-40"
+                    >
+                      Start
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(r.id, r.name) }}
+                      className="text-[13px] font-medium text-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 }
               />
             ))}
