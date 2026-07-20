@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   PageTitle, Card, Group, Row, Button, Sheet, Field, SelectField,
@@ -15,11 +16,18 @@ const TIERS = {
 
 export default function Profile() {
   const { user, signOut } = useAuth()
+  const location = useLocation()
   const [profile, setProfile] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'weight'
+
+  // Arrived from the nav bar's quick-add menu — jump straight into logging weight.
+  useEffect(() => {
+    if (location.state?.quickAdd === 'weight') setSheet('weight')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const load = useCallback(async () => {
     if (!user?.id) return

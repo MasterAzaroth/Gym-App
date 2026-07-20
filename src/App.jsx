@@ -3,7 +3,6 @@ import { useAuth } from './context/AuthContext'
 import AppShell from './components/AppShell'
 import Auth from './pages/Auth'
 import Insights from './pages/Insights'
-import Learn from './pages/Learn'
 import Training from './pages/Training'
 import RoutineBuilder from './pages/RoutineBuilder'
 import WorkoutDetail from './pages/WorkoutDetail'
@@ -29,7 +28,6 @@ export default function App() {
         <Route path="/signin" element={signedIn ? <Navigate to="/" replace /> : <Auth />} />
         <Route element={signedIn ? <AppShell /> : <Navigate to="/signin" replace />}>
           <Route index element={<Insights />} />
-          <Route path="learn" element={<Learn />} />
           <Route path="train" element={<Training />} />
           <Route path="train/routine/:id" element={<RoutineBuilder />} />
           <Route path="train/workout/:id" element={<WorkoutDetail />} />

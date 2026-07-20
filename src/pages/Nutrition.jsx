@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Card, Group, Row, Button, Sheet, Field, Spinner, ErrorNote, Chevron
@@ -13,6 +14,7 @@ import {
 
 export default function Nutrition() {
   const { user, profile } = useAuth()
+  const location = useLocation()
   const [date, setDate] = useState(new Date())
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,6 +42,12 @@ export default function Nutrition() {
     dayStart = DEFAULT_DAY_START
     dayEnd   = DEFAULT_DAY_END
   }
+
+  // Arrived from the nav bar's quick-add menu — jump straight into logging food.
+  useEffect(() => {
+    if (location.state?.quickAdd === 'food') setAddAt(defaultLoggedTime(dayStart, dayEnd))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const load = useCallback(async () => {
     if (!user?.id) return

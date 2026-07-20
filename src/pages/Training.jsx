@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field
@@ -9,7 +9,15 @@ import { listWorkouts, listRoutines, createRoutine, deleteRoutine } from '../lib
 export default function Training() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [tab, setTab] = useState('history')
+
+  // Arrived from the nav bar's quick-add menu — there's no live workout
+  // logging yet, so the closest useful landing spot is the routines list.
+  useEffect(() => {
+    if (location.state?.quickAdd === 'workout') setTab('routines')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <>
