@@ -132,31 +132,46 @@ export default function ActiveWorkout() {
       {error && <div className="mb-4"><ErrorNote error={error} /></div>}
 
       {/* Pinned to the top so it stays visible while scrolling through the
-          set list below — resting is the thing happening right now. */}
-      {timer.active && (
-        <div className="sticky top-0 z-10 -mx-5 mb-4 border-b border-separator bg-fill/95 px-5 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-md items-center justify-between gap-3 py-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
-              <p className="text-[22px] font-bold tnum">{formatClock(timer.remaining)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => timer.addTime(15)}
-                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-violet shadow-card"
-              >
-                +15s
-              </button>
-              <button
-                onClick={timer.stop}
-                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-label2 shadow-card"
-              >
-                Skip
-              </button>
-            </div>
+          set list below — resting is the thing happening right now. Shown
+          from the start of the workout, not just once a rest is running, so
+          the layout doesn't shift the moment the first set is logged. */}
+      <div className="sticky top-0 z-10 -mx-5 mb-4 border-b border-separator bg-fill/95 px-5 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3 py-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
+            <p className="text-[22px] font-bold tnum">{formatClock(timer.remaining)}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => timer.addTime(-15)}
+              disabled={!timer.active}
+              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
+            >
+              -15s
+            </button>
+            <button
+              onClick={() => timer.addTime(15)}
+              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-violet shadow-card"
+            >
+              +15s
+            </button>
+            <button
+              onClick={timer.reset}
+              disabled={!timer.active}
+              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
+            >
+              Reset
+            </button>
+            <button
+              onClick={timer.stop}
+              disabled={!timer.active}
+              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
+            >
+              Skip
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* One exercise on screen at a time — the row above is the way through
           the workout, not a table of contents. */}
@@ -184,12 +199,20 @@ export default function ActiveWorkout() {
         />
       )}
 
-      {/* Finish stays reachable without scrolling. */}
+      {/* Reserves room at the end of the scrollable content so it never sits
+          under the fixed footer below, regardless of how short the active
+          exercise's card is. */}
+      <div style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }} aria-hidden="true" />
+
+      {/* Pinned to the true bottom of the screen, independent of the
+          exercise card's height — it no longer just trails the card with a
+          fixed margin, which used to leave it stranded mid-screen on short
+          exercises. */}
       <div
-        className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 backdrop-blur-sm"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-separator bg-fill/95 backdrop-blur-sm"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
       >
-        <div className="mx-auto max-w-md py-3">
+        <div className="mx-auto max-w-md px-5 py-3">
           <Button onClick={finish} disabled={finishing}>
             {finishing ? 'Finishing…' : 'Finish workout'}
           </Button>

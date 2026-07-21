@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -335,14 +335,41 @@ function MacroField({ label, grams, pct, onGramsChange, onPctChange }) {
         className="min-w-0 flex-1 bg-transparent text-[17px] tnum placeholder:text-label3 focus:outline-none"
       />
       <span className="shrink-0 text-[15px] text-label3">g ·</span>
-      <input
-        type="number" inputMode="numeric"
+      <PercentInput
         value={pct} onChange={onPctChange}
         aria-label={`${label} percent of calories`}
         className="w-10 shrink-0 bg-transparent text-right text-[17px] tnum placeholder:text-label3 focus:outline-none"
       />
       <span className="shrink-0 text-[15px] text-label3">%</span>
     </div>
+  )
+}
+
+/** The percentage shown here is always a derived, rounded number — if the
+    input displayed that value directly while the user is typing, clearing
+    it snaps back to "0" instead of staying blank, and the next digit lands
+    after that phantom zero ("60" -> "0" -> "04" instead of "4"). Keeping a
+    local draft that only resyncs from the derived value while unfocused
+    lets the field show exactly what was typed, the same as any plain text
+    input, while still firing onChange to rescale the other macros live. */
+function PercentInput({ value, onChange, ...props }) {
+  const [draft, setDraft] = useState(String(value))
+  const focused = useRef(false)
+
+  useEffect(() => {
+    if (!focused.current) setDraft(String(value))
+  }, [value])
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      value={draft}
+      onFocus={() => { focused.current = true }}
+      onBlur={() => { focused.current = false; setDraft(String(value)) }}
+      onChange={(e) => { setDraft(e.target.value); onChange(e) }}
+      {...props}
+    />
   )
 }
 
@@ -356,6 +383,10 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
     day_end_time:   shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
   })
   const [saving, setSaving] = useState(false)
+
+  // Scaling calories rescales every macro from this snapshot, not from
+  // whatever the previous keystroke landed on — see setCalories below.
+  const calBasisRef = useRef(null)
 
   // Calories is always the exact sum of the macros — there's no separate
   // number to drift out of sync with them.
@@ -404,19 +435,29 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
   }
 
   // Editing calories directly rescales every macro by the same factor, so
-  // each keeps the same share of calories it had a moment ago.
+  // each keeps the same share of calories it had a moment ago. Typing a
+  // multi-digit number fires this once per keystroke ("1", "10", "100", …),
+  // and a naive version that rescales from the CURRENT macros each time
+  // collapses everything to 0g the moment an intermediate value like "1"
+  // rounds every macro down to nothing — after which there's no ratio left
+  // to scale back up from. Anchoring every keystroke of one edit to the
+  // macros as they stood when the field was first focused avoids that.
   function setCalories(e) {
-    const newKcal = Number(e.target.value) || 0
+    const raw = e.target.value
+    const newKcal = Number(raw) || 0
     setForm((f) => {
-      const p   = Number(f.goal_protein_g) || 0
-      const c   = Number(f.goal_carbs_g) || 0
-      const fat = Number(f.goal_fat_g) || 0
-      const oldKcal = p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat
+      const basis = calBasisRef.current ?? {
+        p:   Number(f.goal_protein_g) || 0,
+        c:   Number(f.goal_carbs_g) || 0,
+        fat: Number(f.goal_fat_g) || 0
+      }
+      calBasisRef.current = basis
+      const oldKcal = basis.p * KCAL_PER_G.protein + basis.c * KCAL_PER_G.carbs + basis.fat * KCAL_PER_G.fat
 
       if (oldKcal <= 0) {
         return {
           ...f,
-          goal_kcal: e.target.value,
+          goal_kcal: raw,
           goal_protein_g: Math.round((newKcal * DEFAULT_MACRO_SPLIT.protein) / KCAL_PER_G.protein),
           goal_carbs_g:   Math.round((newKcal * DEFAULT_MACRO_SPLIT.carbs) / KCAL_PER_G.carbs),
           goal_fat_g:     Math.round((newKcal * DEFAULT_MACRO_SPLIT.fat) / KCAL_PER_G.fat)
@@ -426,10 +467,10 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
       const scale = newKcal / oldKcal
       return {
         ...f,
-        goal_kcal: e.target.value,
-        goal_protein_g: Math.round(p * scale),
-        goal_carbs_g:   Math.round(c * scale),
-        goal_fat_g:     Math.round(fat * scale)
+        goal_kcal: raw,
+        goal_protein_g: Math.round(basis.p * scale),
+        goal_carbs_g:   Math.round(basis.c * scale),
+        goal_fat_g:     Math.round(basis.fat * scale)
       }
     })
   }
@@ -466,7 +507,8 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
            footer={<Button onClick={save} disabled={saving || dayRangeInvalid}>{saving ? 'Saving…' : 'Save'}</Button>}>
       <Group className="mt-2">
         <Field label="Calories" type="number" inputMode="numeric" suffix="kcal"
-               value={form.goal_kcal ?? ''} onChange={setCalories} />
+               value={form.goal_kcal ?? ''} onChange={setCalories}
+               onFocus={() => { calBasisRef.current = null }} />
         <MacroField label="Protein" grams={form.goal_protein_g ?? ''} pct={pctOf(p, KCAL_PER_G.protein)}
                     onGramsChange={setMacroGrams('goal_protein_g')} onPctChange={setMacroPct('protein')} />
         <MacroField label="Carbs" grams={form.goal_carbs_g ?? ''} pct={pctOf(c, KCAL_PER_G.carbs)}

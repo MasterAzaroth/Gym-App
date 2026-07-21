@@ -55,7 +55,7 @@ export function useRestTimer(workoutId) {
     active: Boolean(endAt),
     remaining,
     start: (seconds) => {
-      const next = { workoutId, endAt: Date.now() + seconds * 1000 }
+      const next = { workoutId, endAt: Date.now() + seconds * 1000, duration: seconds }
       write(next)
       setStored(next)
     },
@@ -63,10 +63,32 @@ export function useRestTimer(workoutId) {
       write(null)
       setStored(null)
     },
+    // Positive deltas also work with no timer running yet — the button
+    // doubles as "start a rest" when tapped from idle, which is how the
+    // rest bar stays usable before the first set of the workout is logged.
     addTime: (delta) => {
       setStored((s) => {
+        if (!s || s.workoutId !== workoutId) {
+          if (delta <= 0) return s
+          const next = { workoutId, endAt: Date.now() + delta * 1000, duration: delta }
+          write(next)
+          return next
+        }
+        const remainingMs = Math.max(0, s.endAt - Date.now() + delta * 1000)
+        if (remainingMs <= 0) {
+          write(null)
+          return null
+        }
+        const next = { ...s, endAt: Date.now() + remainingMs }
+        write(next)
+        return next
+      })
+    },
+    // Back to the full length of the current rest, undoing any +/-15s taps.
+    reset: () => {
+      setStored((s) => {
         if (!s || s.workoutId !== workoutId) return s
-        const next = { ...s, endAt: s.endAt + delta * 1000 }
+        const next = { ...s, endAt: Date.now() + (s.duration ?? 0) * 1000 }
         write(next)
         return next
       })
