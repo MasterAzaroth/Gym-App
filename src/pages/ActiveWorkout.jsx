@@ -363,12 +363,12 @@ function SetRow({ slot, exerciseId, onLog, onEdit, onRemove }) {
   if (slot.logged && !forceEdit) {
     const isWarmup = slot.plan?.is_warmup ?? false
     return (
-      <div className={`flex items-center gap-2 rounded-lg p-2.5 ${isWarmup ? 'bg-fill' : 'bg-violet-soft'}`}>
-        <button onClick={() => setForceEdit(true)} className="flex flex-1 items-center gap-3 text-left">
-          <span className={`w-16 shrink-0 text-[13px] font-medium ${isWarmup ? 'text-label2' : 'text-violet'}`}>
+      <div className={`flex h-8 items-center gap-2 rounded-lg p-2.5 ${isWarmup ? 'bg-tile' : 'bg-violet-soft'}`}>
+        <button onClick={() => setForceEdit(true)} className="flex h-8 flex-1 items-center gap-3 text-left">
+          <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
             {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
           </span>
-          <span className="text-[16px] font-semibold tnum">
+          <span className="text-[16px] font-semibold leading-none tnum">
             {slot.logged.weight_kg ?? 0} kg × {slot.logged.reps ?? 0}
           </span>
         </button>
@@ -421,21 +421,21 @@ function SetInputRow({ slot, exerciseId, onLog, onEdit, onDone }) {
   }
 
   return (
-    <div className="rounded-lg bg-fill p-2.5">
+    <div className="rounded-lg bg-tile p-2.5">
       <div className="flex h-8 items-center gap-2">
-        <span className={`w-16 shrink-0 text-[13px] font-medium ${isWarmup ? 'text-label2' : 'text-violet'}`}>
+        <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
           {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
         </span>
         <input
           type="number" inputMode="decimal" placeholder="kg"
           value={weight} onChange={(e) => setWeight(e.target.value)}
-          className="h-8 w-16 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
+          className="h-8 w-16 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] leading-none tnum focus:outline-none focus:ring-2 focus:ring-violet"
         />
-        <span className="shrink-0 text-label3">×</span>
+        <span className="shrink-0 leading-none text-label3">×</span>
         <input
           type="number" inputMode="numeric" placeholder={targetLabel ?? 'reps'}
           value={reps} onChange={(e) => setReps(e.target.value)}
-          className="h-8 w-14 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
+          className="h-8 w-14 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] leading-none tnum focus:outline-none focus:ring-2 focus:ring-violet"
         />
         <button
           onClick={confirm}

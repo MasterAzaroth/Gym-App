@@ -14,6 +14,7 @@ export default {
         separator: 'rgb(var(--color-separator) / <alpha-value>)',
         fill:    'rgb(var(--color-fill) / <alpha-value>)',
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        tile:    'rgb(var(--color-tile) / <alpha-value>)',
         violet: {
           DEFAULT: 'rgb(var(--color-violet) / <alpha-value>)',
           hover:   'rgb(var(--color-violet-hover) / <alpha-value>)',
