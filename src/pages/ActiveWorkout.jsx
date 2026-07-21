@@ -421,21 +421,21 @@ function SetInputRow({ slot, exerciseId, onLog, onEdit, onDone }) {
   }
 
   return (
-    <div className={`rounded-lg p-2.5 ${isWarmup ? 'bg-fill' : 'bg-surface shadow-card'}`}>
-      <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-[13px] font-medium text-label2">
+    <div className="rounded-lg bg-fill p-2.5">
+      <div className="flex h-8 items-center gap-2">
+        <span className={`w-16 shrink-0 text-[13px] font-medium ${isWarmup ? 'text-label2' : 'text-violet'}`}>
           {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
         </span>
         <input
           type="number" inputMode="decimal" placeholder="kg"
           value={weight} onChange={(e) => setWeight(e.target.value)}
-          className="w-16 rounded-lg bg-fill px-2 py-1.5 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
+          className="h-8 w-16 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
         />
-        <span className="text-label3">×</span>
+        <span className="shrink-0 text-label3">×</span>
         <input
           type="number" inputMode="numeric" placeholder={targetLabel ?? 'reps'}
           value={reps} onChange={(e) => setReps(e.target.value)}
-          className="w-14 rounded-lg bg-fill px-2 py-1.5 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
+          className="h-8 w-14 shrink-0 rounded-lg bg-surface px-2 text-center text-[15px] tnum focus:outline-none focus:ring-2 focus:ring-violet"
         />
         <button
           onClick={confirm}
