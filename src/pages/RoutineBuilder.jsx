@@ -119,13 +119,6 @@ const workingNumber = (sets, i) => sets.slice(0, i + 1).filter((s) => !s.is_warm
 
 function ExerciseCard({ index, item, onEdit, onRemove }) {
   const sets = item.routine_sets ?? []
-  const working = sets.filter((s) => !s.is_warmup)
-
-  // If every working set asks for the same range, say it once. Only spell the
-  // sets out individually when they actually differ.
-  const uniform = working.length > 0 && working.every(
-    (s) => s.rep_low === working[0].rep_low && s.rep_high === working[0].rep_high
-  )
 
   return (
     <Card className="p-4">
@@ -139,16 +132,26 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
             {item.exercise?.muscle_group} · {item.exercise?.equipment}
           </p>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={onEdit}
+            aria-label="Edit sets"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-violet"
+          >
+            <EditIcon />
+          </button>
+          <button
+            onClick={onRemove}
+            aria-label="Remove exercise"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-danger"
+          >
+            <TrashIcon />
+          </button>
+        </div>
       </div>
 
       {sets.length === 0 ? (
         <p className="mt-3 text-[15px] text-label2">No sets planned.</p>
-      ) : uniform && sets.length === working.length ? (
-        <p className="mt-3 text-[15px] tnum">
-          <b className="font-semibold">{working.length}</b> sets ×{' '}
-          <b className="font-semibold">{repLabel(working[0])}</b> reps
-          <span className="text-label2"> · {working[0].rest_seconds}s rest</span>
-        </p>
       ) : (
         <table className="mt-3 w-full text-[15px] tnum">
           <tbody className="divide-y divide-separator">
@@ -168,12 +171,26 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
       )}
 
       {item.notes && <p className="mt-2 text-[13px] italic text-label2">{item.notes}</p>}
-
-      <div className="mt-3 flex gap-2 border-t border-separator pt-3">
-        <Button size="sm" variant="subtle" onClick={onEdit}>Edit sets</Button>
-        <Button size="sm" variant="danger" onClick={onRemove}>Remove</Button>
-      </div>
     </Card>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7-3 .7.7-3 7-7.1Z"
+            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5l.6 8.4a1 1 0 0 0 1 .93h3.8a1 1 0 0 0 1-.93l.6-8.4"
+            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 7v4M9.5 7v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
   )
 }
 

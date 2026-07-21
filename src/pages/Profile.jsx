@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import {
@@ -18,11 +19,23 @@ const TIERS = {
 export default function Profile() {
   const { user, signOut } = useAuth()
   const { preference, setTheme } = useTheme()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'weight'
+
+  // Arriving from elsewhere (e.g. the nutrition tab's day-window edit
+  // button) can request a sheet open immediately, without a stale link
+  // reopening it if the user navigates back here later.
+  useEffect(() => {
+    if (location.state?.openSheet) {
+      setSheet(location.state.openSheet)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, navigate])
 
   const load = useCallback(async () => {
     if (!user?.id) return
@@ -306,6 +319,32 @@ function TrainingSheet({ open, profile, onClose, onSaved }) {
 
 const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 }
 const DEFAULT_MACRO_SPLIT = { protein: 0.3, carbs: 0.4, fat: 0.3 } // of calories, used only when starting from zero
+const FIELD_FOR = { protein: 'goal_protein_g', carbs: 'goal_carbs_g', fat: 'goal_fat_g' }
+const MACRO_KEYS = ['protein', 'carbs', 'fat']
+
+/** Grams and percentage of calories, both editable — each keeps the other in
+    sync instead of the percentage being a read-only derived label. */
+function MacroField({ label, grams, pct, onGramsChange, onPctChange }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <span className="w-[104px] shrink-0 text-[17px]">{label}</span>
+      <input
+        type="number" inputMode="numeric"
+        value={grams} onChange={onGramsChange}
+        aria-label={`${label} grams`}
+        className="min-w-0 flex-1 bg-transparent text-[17px] tnum placeholder:text-label3 focus:outline-none"
+      />
+      <span className="shrink-0 text-[15px] text-label3">g ·</span>
+      <input
+        type="number" inputMode="numeric"
+        value={pct} onChange={onPctChange}
+        aria-label={`${label} percent of calories`}
+        className="w-10 shrink-0 bg-transparent text-right text-[17px] tnum placeholder:text-label3 focus:outline-none"
+      />
+      <span className="shrink-0 text-[15px] text-label3">%</span>
+    </div>
+  )
+}
 
 function GoalsSheet({ open, profile, onClose, onSaved }) {
   const [form, set, setForm] = useForm(open, {
@@ -328,6 +367,37 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
         const c   = Number(next.goal_carbs_g) || 0
         const fat = Number(next.goal_fat_g) || 0
         next.goal_kcal = Math.round(p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat)
+        return next
+      })
+    }
+  }
+
+  // Editing a macro's percentage holds total calories fixed: that macro's
+  // grams move to hit the new share, and the other two rescale together
+  // (keeping their ratio to each other) to soak up whatever share is left.
+  function setMacroPct(macroKey) {
+    return (e) => {
+      const raw = e.target.value
+      setForm((f) => {
+        const kcalFor = (k) => (Number(f[FIELD_FOR[k]]) || 0) * KCAL_PER_G[k]
+        const total = MACRO_KEYS.reduce((sum, k) => sum + kcalFor(k), 0) || Number(f.goal_kcal) || 0
+        if (total <= 0) return { ...f, [FIELD_FOR[macroKey]]: raw }
+
+        const newPct = Math.max(0, Math.min(100, Number(raw) || 0))
+        const newKcalForKey = total * (newPct / 100)
+        const remainingKcal = total - newKcalForKey
+        const otherKeys = MACRO_KEYS.filter((k) => k !== macroKey)
+        const otherKcalSum = otherKeys.reduce((sum, k) => sum + kcalFor(k), 0)
+
+        const next = { ...f, [FIELD_FOR[macroKey]]: Math.round(newKcalForKey / KCAL_PER_G[macroKey]) }
+        for (const k of otherKeys) {
+          const share = otherKcalSum > 0 ? kcalFor(k) / otherKcalSum : 1 / otherKeys.length
+          next[FIELD_FOR[k]] = Math.round((remainingKcal * share) / KCAL_PER_G[k])
+        }
+
+        next.goal_kcal = Math.round(
+          MACRO_KEYS.reduce((sum, k) => sum + (Number(next[FIELD_FOR[k]]) || 0) * KCAL_PER_G[k], 0)
+        )
         return next
       })
     }
@@ -397,16 +467,16 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
       <Group className="mt-2">
         <Field label="Calories" type="number" inputMode="numeric" suffix="kcal"
                value={form.goal_kcal ?? ''} onChange={setCalories} />
-        <Field label="Protein" type="number" inputMode="numeric" suffix={`g · ${pctOf(p, KCAL_PER_G.protein)}%`}
-               value={form.goal_protein_g ?? ''} onChange={setMacroGrams('goal_protein_g')} />
-        <Field label="Carbs" type="number" inputMode="numeric" suffix={`g · ${pctOf(c, KCAL_PER_G.carbs)}%`}
-               value={form.goal_carbs_g ?? ''} onChange={setMacroGrams('goal_carbs_g')} />
-        <Field label="Fat" type="number" inputMode="numeric" suffix={`g · ${pctOf(fat, KCAL_PER_G.fat)}%`}
-               value={form.goal_fat_g ?? ''} onChange={setMacroGrams('goal_fat_g')} />
+        <MacroField label="Protein" grams={form.goal_protein_g ?? ''} pct={pctOf(p, KCAL_PER_G.protein)}
+                    onGramsChange={setMacroGrams('goal_protein_g')} onPctChange={setMacroPct('protein')} />
+        <MacroField label="Carbs" grams={form.goal_carbs_g ?? ''} pct={pctOf(c, KCAL_PER_G.carbs)}
+                    onGramsChange={setMacroGrams('goal_carbs_g')} onPctChange={setMacroPct('carbs')} />
+        <MacroField label="Fat" grams={form.goal_fat_g ?? ''} pct={pctOf(fat, KCAL_PER_G.fat)}
+                    onGramsChange={setMacroGrams('goal_fat_g')} onPctChange={setMacroPct('fat')} />
       </Group>
       <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">
-        Calories are always the sum of your macros — change calories and the macros rescale to keep
-        the same split; change a macro and calories update to match.
+        Calories always match the sum of your macros. Change calories and the macros rescale to keep
+        the same split; change a macro's grams or its percentage and the other two adjust to match.
       </p>
 
       <Group className="mt-4">

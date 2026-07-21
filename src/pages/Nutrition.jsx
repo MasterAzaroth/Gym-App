@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Card, Group, Button, Sheet, Field, Spinner, ErrorNote, Chevron, Macro
@@ -13,6 +14,7 @@ import {
 } from '../lib/nutrition'
 
 export default function Nutrition() {
+  const navigate = useNavigate()
   const { user, profile } = useAuth()
   const [date, setDate] = useState(new Date())
   const [entries, setEntries] = useState([])
@@ -123,8 +125,15 @@ export default function Nutrition() {
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
               Food
             </h2>
-            <span className="text-[13px] text-label2 tnum">
+            <span className="flex items-center gap-1.5 text-[13px] text-label2 tnum">
               {formatTime(dayStart)} – {formatTime(dayEnd)}
+              <button
+                onClick={() => navigate('/profile', { state: { openSheet: 'goals' } })}
+                aria-label="Edit day window"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:bg-fill hover:text-violet"
+              >
+                <EditIcon />
+              </button>
             </span>
           </div>
 
@@ -164,6 +173,23 @@ export default function Nutrition() {
   )
 }
 
+function EditIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+      <path d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7-3 .7.7-3 7-7.1Z"
+            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2.5v11M2.5 8h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function StepButton({ dir, onClick, disabled }) {
   return (
     <button
@@ -191,9 +217,9 @@ function HourRow({ hour, entries, onAdd, onEdit }) {
         <button
           onClick={onAdd}
           aria-label={`Add food at ${formatHour(hour)}`}
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-soft text-[14px] font-semibold leading-none text-violet transition-colors hover:bg-violet/20"
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-soft text-violet transition-colors hover:bg-violet/20"
         >
-          +
+          <PlusIcon />
         </button>
       </div>
 

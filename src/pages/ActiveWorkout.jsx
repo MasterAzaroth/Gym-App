@@ -131,6 +131,33 @@ export default function ActiveWorkout() {
 
       {error && <div className="mb-4"><ErrorNote error={error} /></div>}
 
+      {/* Pinned to the top so it stays visible while scrolling through the
+          set list below — resting is the thing happening right now. */}
+      {timer.active && (
+        <div className="sticky top-0 z-10 -mx-5 mb-4 border-b border-separator bg-fill/95 px-5 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3 py-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
+              <p className="text-[22px] font-bold tnum">{formatClock(timer.remaining)}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => timer.addTime(15)}
+                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-violet shadow-card"
+              >
+                +15s
+              </button>
+              <button
+                onClick={timer.stop}
+                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-label2 shadow-card"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* One exercise on screen at a time — the row above is the way through
           the workout, not a table of contents. */}
       <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1">
@@ -157,34 +184,11 @@ export default function ActiveWorkout() {
         />
       )}
 
-      {/* Finish stays reachable without scrolling — the rest timer, when
-          running, sits directly above it in the same fixed footer. */}
+      {/* Finish stays reachable without scrolling. */}
       <div
         className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-separator bg-fill/95 px-5 backdrop-blur-sm"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
       >
-        {timer.active && (
-          <div className="mx-auto flex max-w-md items-center justify-between gap-3 border-b border-separator py-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">Rest</p>
-              <p className="text-[22px] font-bold tnum">{formatClock(timer.remaining)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => timer.addTime(15)}
-                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-violet shadow-card"
-              >
-                +15s
-              </button>
-              <button
-                onClick={timer.stop}
-                className="rounded-lg bg-surface px-3 py-2 text-[13px] font-semibold text-label2 shadow-card"
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
         <div className="mx-auto max-w-md py-3">
           <Button onClick={finish} disabled={finishing}>
             {finishing ? 'Finishing…' : 'Finish workout'}

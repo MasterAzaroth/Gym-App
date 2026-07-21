@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Sheet, Group, Row } from './ui'
+import { Sheet } from './ui'
 import FoodAddSheet from './FoodAddSheet'
 import WeightLogSheet from './WeightLogSheet'
 import { dayWindow, defaultLoggedTime, toISODate } from '../lib/nutrition'
@@ -51,16 +51,25 @@ export default function BottomNav() {
       </ul>
 
       <Sheet open={quickAddOpen} onClose={() => setQuickAddOpen(false)} title="Quick add">
-        <Group className="mt-2">
-          <Row label="Log food" onClick={() => { setQuickAddOpen(false); setFoodOpen(true) }} />
-          <Row label="Log weight" onClick={() => { setQuickAddOpen(false); setWeightOpen(true) }} />
+        <div className="mt-2 grid grid-cols-3 gap-3">
+          <QuickAddOption
+            icon={<IconFoodAction />}
+            label="Log food"
+            onClick={() => { setQuickAddOpen(false); setFoodOpen(true) }}
+          />
+          <QuickAddOption
+            icon={<IconWeightAction />}
+            label="Log weight"
+            onClick={() => { setQuickAddOpen(false); setWeightOpen(true) }}
+          />
           {/* No live workout-logging flow exists yet — closest useful spot is
               the routines list, so this one still navigates. */}
-          <Row
-            label="Start a workout"
+          <QuickAddOption
+            icon={<IconWorkoutAction />}
+            label="Start workout"
             onClick={() => { setQuickAddOpen(false); navigate('/train', { state: { quickAdd: 'workout' } }) }}
           />
-        </Group>
+        </div>
       </Sheet>
 
       {/* Logs directly, from wherever you are — no navigation, no page to visit first. */}
@@ -81,6 +90,23 @@ export default function BottomNav() {
         onSaved={() => setWeightOpen(false)}
       />
     </nav>
+  )
+}
+
+/** A tappable tile, not a list row — three big targets read faster than a
+    stack of text at a glance, and match the sheet's spirit of "pick one and
+    go" rather than "read then choose". */
+function QuickAddOption({ icon, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-4 text-center shadow-card transition-transform active:scale-[0.96]"
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-soft text-violet">
+        {icon}
+      </span>
+      <span className="text-[13px] font-medium leading-tight">{label}</span>
+    </button>
   )
 }
 
@@ -127,6 +153,29 @@ function IconNutrition({ active }) {
 }
 function IconProfile({ active }) {
   return <svg {...w(active)}><circle cx="12" cy="8" r="3.75"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+}
+function IconFoodAction() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/>
+      <path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/>
+    </svg>
+  )
+}
+function IconWeightAction() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="4" />
+      <path d="M12 16v-5M12 11l2.5-2.5" />
+    </svg>
+  )
+}
+function IconWorkoutAction() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10"/>
+    </svg>
+  )
 }
 function IconPlus() {
   return (
