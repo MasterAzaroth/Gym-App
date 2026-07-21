@@ -12,7 +12,7 @@
   --color-separator: 229 229 234; /* #E5E5EA */
   --color-fill:    242 242 247; /* #F2F2F7 — grouped background */
   --color-surface: 250 250 252; /* #FAFAFC — card, just off pure white so it doesn't glare */
-  --color-tile:    244 244 247; /* #F4F4F7 — nested tile inside a card (e.g. a set row) */
+  --color-tile:    246 246 250; /* #F6F6FA — nested tile inside a card, exactly midway between fill and surface */
   /* Accent */
   --color-violet:       110 86 207;  /* #6E56CF */
   --color-violet-hover: 95 72 188;   /* #5F48BC */
@@ -31,11 +31,9 @@
   --color-separator: 56 56 58;  /* #38383A */
   --color-fill:    16 16 18;    /* #101012 */
   --color-surface: 28 28 30;    /* #1C1C1E */
-  /* Nested tiles (e.g. a set row inside an exercise card): same ratio as
-     light mode — sits close to the page fill, about a quarter of the way
-     toward the card's surface tone, not equal to fill (too flat/dark) and
-     not past the card's own surface (too light). */
-  --color-tile:    19 19 21;    /* #131315 */
+  /* Nested tiles (e.g. a set row inside an exercise card), exactly midway
+     between fill and surface — same rule as light mode. */
+  --color-tile:    22 22 24;    /* #161618 */
   /* Accent — same hue, slightly lifted so it still pops off black */
   --color-violet:       134 114 224; /* #8672E0 */
   --color-violet-hover: 154 137 230; /* #9A89E6 */

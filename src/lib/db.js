@@ -104,9 +104,9 @@ export async function addRoutineExercise(routineId, exerciseId, position, sets) 
   // RoutineBuilder's SetsSheet. Fall back to a plain default only if a caller
   // skips that step.
   await replaceRoutineSets(data.id, sets ?? [
-    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null },
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null },
+    { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null }
   ])
 
   return data
@@ -133,7 +133,10 @@ export async function replaceRoutineSets(routineExerciseId, rows) {
     is_warmup:        Boolean(r.is_warmup),
     target_weight_kg: r.target_weight_kg === '' || r.target_weight_kg == null
       ? null
-      : Number(r.target_weight_kg)
+      : Number(r.target_weight_kg),
+    target_rir: r.target_rir === '' || r.target_rir == null
+      ? null
+      : Number(r.target_rir)
   }))
 
   const { data, error } = await supabase.from('routine_sets').insert(payload).select()

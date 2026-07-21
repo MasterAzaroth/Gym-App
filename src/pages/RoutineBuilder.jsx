@@ -162,6 +162,9 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
                 </td>
                 <td className="py-1.5 text-right font-medium">{repLabel(s)} reps</td>
                 <td className="w-16 py-1.5 text-right text-[13px] text-label2">
+                  {s.target_rir != null ? `${s.target_rir} RIR` : '—'}
+                </td>
+                <td className="w-16 py-1.5 text-right text-[13px] text-label2">
                   {s.rest_seconds}s
                 </td>
               </tr>
@@ -199,9 +202,9 @@ function TrashIcon() {
 /** Starting point when confirming a freshly-picked exercise — the user tunes
     this before it's ever written anywhere. */
 const DEFAULT_SETS = [
-  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false },
-  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false }
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null },
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null },
+  { rep_low: 8, rep_high: 12, rest_seconds: 120, is_warmup: false, target_rir: null }
 ]
 
 /**
@@ -234,7 +237,7 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
         // Warm-ups lead into working sets, so a new one joins the end of the
         // warm-up block rather than tacking onto the very end of the list.
         const firstWorking = rs.findIndex((r) => !r.is_warmup)
-        const row = { rep_low: 5, rep_high: 5, rest_seconds: 60, is_warmup: true }
+        const row = { rep_low: 5, rep_high: 5, rest_seconds: 60, is_warmup: true, target_rir: null }
         if (firstWorking === -1) return [...rs, row]
         return [...rs.slice(0, firstWorking), row, ...rs.slice(firstWorking)]
       }
@@ -243,7 +246,8 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
         rep_low:      last?.rep_low ?? 8,
         rep_high:     last?.rep_high ?? 12,
         rest_seconds: last?.rest_seconds ?? 120,
-        is_warmup:    false
+        is_warmup:    false,
+        target_rir:   last?.target_rir ?? null
       }]
     })
 
@@ -258,7 +262,8 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
       ...r,
       rep_low: first.rep_low,
       rep_high: first.rep_high,
-      rest_seconds: first.rest_seconds
+      rest_seconds: first.rest_seconds,
+      target_rir: first.target_rir
     })))
   }
 
@@ -293,6 +298,7 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
       <div className="mb-2 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-label2">
         <span className="w-[64px]">Set</span>
         <span className="flex-1 text-center">Reps</span>
+        <span className="w-[52px] text-center">RIR</span>
         <span className="w-[62px] text-center">Rest</span>
         <span className="w-6" />
       </div>
@@ -320,6 +326,15 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
                 value={r.rep_high}
                 onChange={(v) => update(i, 'rep_high', v)}
                 aria-label="Maximum reps"
+              />
+            </div>
+
+            <div className="flex w-[52px] shrink-0 justify-center">
+              <NumInput
+                value={r.target_rir ?? ''}
+                onChange={(v) => update(i, 'target_rir', v)}
+                placeholder="–"
+                aria-label="Target RIR"
               />
             </div>
 
@@ -364,7 +379,8 @@ function SetsSheet({ open, title, initialRows, confirmVerb = 'Save', onClose, on
       <p className="mt-4 px-1 text-[13px] leading-relaxed text-label2">
         A heavy top set of 4–6 followed by back-offs of 8–12 is a different session from four
         straight sets of 8–12 — the routine can now say which one you meant. For a fixed target,
-        put the same number in both boxes.
+        put the same number in both boxes. RIR (reps in reserve) is optional — leave it blank if
+        you'd rather decide how hard to push on the day.
       </p>
     </Sheet>
   )

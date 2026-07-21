@@ -363,22 +363,24 @@ function SetRow({ slot, exerciseId, onLog, onEdit, onRemove }) {
   if (slot.logged && !forceEdit) {
     const isWarmup = slot.plan?.is_warmup ?? false
     return (
-      <div className={`flex h-8 items-center gap-2 rounded-lg p-2.5 ${isWarmup ? 'bg-tile' : 'bg-violet-soft'}`}>
-        <button onClick={() => setForceEdit(true)} className="flex h-8 flex-1 items-center gap-3 text-left">
-          <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
-            {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
-          </span>
-          <span className="text-[16px] font-semibold leading-none tnum">
-            {slot.logged.weight_kg ?? 0} kg × {slot.logged.reps ?? 0}
-          </span>
-        </button>
-        <button
-          onClick={() => onRemove(slot.logged.id)}
-          aria-label="Remove set"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:text-danger"
-        >
-          <XIcon size={14} />
-        </button>
+      <div className={`rounded-lg p-2.5 ${isWarmup ? 'bg-tile' : 'bg-violet-soft'}`}>
+        <div className="flex h-8 items-center gap-2">
+          <button onClick={() => setForceEdit(true)} className="flex h-8 flex-1 items-center gap-3 text-left">
+            <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
+              {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
+            </span>
+            <span className="text-[16px] font-semibold leading-none tnum">
+              {slot.logged.weight_kg ?? 0} kg × {slot.logged.reps ?? 0}
+            </span>
+          </button>
+          <button
+            onClick={() => onRemove(slot.logged.id)}
+            aria-label="Remove set"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:text-danger"
+          >
+            <XIcon size={14} />
+          </button>
+        </div>
       </div>
     )
   }
