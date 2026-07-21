@@ -31,10 +31,11 @@
   --color-separator: 56 56 58;  /* #38383A */
   --color-fill:    16 16 18;    /* #101012 */
   --color-surface: 28 28 30;    /* #1C1C1E */
-  /* Nested tiles (e.g. a set row inside an exercise card) sit a step LIGHTER
-     than the card here, not darker — matching the page's own near-black fill
-     read as too heavy stacked two levels deep against a lighter card. */
-  --color-tile:    44 44 48;    /* #2C2C30 */
+  /* Nested tiles (e.g. a set row inside an exercise card): same ratio as
+     light mode — sits close to the page fill, about a quarter of the way
+     toward the card's surface tone, not equal to fill (too flat/dark) and
+     not past the card's own surface (too light). */
+  --color-tile:    19 19 21;    /* #131315 */
   /* Accent — same hue, slightly lifted so it still pops off black */
   --color-violet:       134 114 224; /* #8672E0 */
   --color-violet-hover: 154 137 230; /* #9A89E6 */

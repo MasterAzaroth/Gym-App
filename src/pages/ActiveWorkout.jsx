@@ -209,7 +209,7 @@ export default function ActiveWorkout() {
           fixed margin, which used to leave it stranded mid-screen on short
           exercises. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-10 border-t border-separator bg-fill/95 backdrop-blur-sm"
+        className="fixed inset-x-0 bottom-0 z-10 bg-fill/95 backdrop-blur-sm"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
       >
         <div className="mx-auto max-w-md px-5 py-3">
@@ -446,11 +446,6 @@ function SetInputRow({ slot, exerciseId, onLog, onEdit, onDone }) {
           <CheckIcon />
         </button>
       </div>
-      {targetLabel && (
-        <p className="mt-1 pl-[72px] text-[11px] text-label3">
-          Target {targetLabel} reps{slot.plan?.target_weight_kg ? ` · ${slot.plan.target_weight_kg} kg` : ''}
-        </p>
-      )}
     </div>
   )
 }
