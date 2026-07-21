@@ -25,7 +25,7 @@ export default function Profile() {
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'weight'
+  const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'window' | 'weight'
 
   // Arriving from elsewhere (e.g. the nutrition tab's day-window edit
   // button) can request a sheet open immediately, without a stale link
@@ -131,7 +131,7 @@ export default function Profile() {
           <Row
             label="Day window"
             value={`${formatTime(shortTime(profile?.day_start_time) || DEFAULT_DAY_START)} – ${formatTime(shortTime(profile?.day_end_time) || DEFAULT_DAY_END)}`}
-            onClick={() => setSheet('goals')}
+            onClick={() => setSheet('window')}
           />
         </Group>
       </Section>
@@ -197,6 +197,11 @@ export default function Profile() {
       />
       <GoalsSheet
         open={sheet === 'goals'} profile={profile}
+        onClose={() => setSheet(null)}
+        onSaved={() => { setSheet(null); load() }}
+      />
+      <DayWindowSheet
+        open={sheet === 'window'} profile={profile}
         onClose={() => setSheet(null)}
         onSaved={() => { setSheet(null); load() }}
       />
@@ -381,13 +386,11 @@ function PercentInput({ value, onChange, ...props }) {
 }
 
 function GoalsSheet({ open, profile, onClose, onSaved }) {
-  const [form, set, setForm] = useForm(open, {
+  const [form, , setForm] = useForm(open, {
     goal_kcal:      profile?.goal_kcal ?? 2500,
     goal_protein_g: profile?.goal_protein_g ?? 180,
     goal_carbs_g:   profile?.goal_carbs_g ?? 280,
-    goal_fat_g:     profile?.goal_fat_g ?? 80,
-    day_start_time: shortTime(profile?.day_start_time) || DEFAULT_DAY_START,
-    day_end_time:   shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
+    goal_fat_g:     profile?.goal_fat_g ?? 80
   })
   const [saving, setSaving] = useState(false)
 
@@ -488,12 +491,6 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
   const totalKcal = p * KCAL_PER_G.protein + c * KCAL_PER_G.carbs + fat * KCAL_PER_G.fat
   const pctOf = (grams, per) => (totalKcal > 0 ? Math.round((grams * per / totalKcal) * 100) : 0)
 
-  // An end-before-start window leaves the Nutrition tab's hourly timeline
-  // with zero rows to show, so it isn't a valid state to save.
-  const dayStartVal = form.day_start_time || DEFAULT_DAY_START
-  const dayEndVal   = form.day_end_time   || DEFAULT_DAY_END
-  const dayRangeInvalid = dayEndVal <= dayStartVal
-
   async function save() {
     setSaving(true)
     try {
@@ -501,9 +498,7 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
         goal_kcal:      Math.round(totalKcal),
         goal_protein_g: p,
         goal_carbs_g:   c,
-        goal_fat_g:     fat,
-        day_start_time: dayStartVal,
-        day_end_time:   dayEndVal
+        goal_fat_g:     fat
       })
       onSaved()
     } finally { setSaving(false) }
@@ -511,7 +506,7 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Nutrition goals"
-           footer={<Button onClick={save} disabled={saving || dayRangeInvalid}>{saving ? 'Saving…' : 'Save'}</Button>}>
+           footer={<Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>}>
       <Group className="mt-2">
         <Field label="Calories" type="number" inputMode="numeric" suffix="kcal"
                value={form.goal_kcal ?? ''} onChange={setCalories}
@@ -530,8 +525,38 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
         Calories always match the sum of your macros. Change calories and the macros rescale to keep
         the same split; change a macro's grams or its percentage and the other two adjust to match.
       </p>
+    </Sheet>
+  )
+}
 
-      <Group className="mt-4">
+function DayWindowSheet({ open, profile, onClose, onSaved }) {
+  const [form, set] = useForm(open, {
+    day_start_time: shortTime(profile?.day_start_time) || DEFAULT_DAY_START,
+    day_end_time:   shortTime(profile?.day_end_time)   || DEFAULT_DAY_END
+  })
+  const [saving, setSaving] = useState(false)
+
+  // An end-before-start window leaves the Nutrition tab's hourly timeline
+  // with zero rows to show, so it isn't a valid state to save.
+  const dayStartVal = form.day_start_time || DEFAULT_DAY_START
+  const dayEndVal   = form.day_end_time   || DEFAULT_DAY_END
+  const dayRangeInvalid = dayEndVal <= dayStartVal
+
+  async function save() {
+    setSaving(true)
+    try {
+      await updateProfile(profile.id, {
+        day_start_time: dayStartVal,
+        day_end_time:   dayEndVal
+      })
+      onSaved()
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Day window"
+           footer={<Button onClick={save} disabled={saving || dayRangeInvalid}>{saving ? 'Saving…' : 'Save'}</Button>}>
+      <Group className="mt-2">
         <Field label="Day starts" type="time"
                value={form.day_start_time ?? DEFAULT_DAY_START} onChange={set('day_start_time')} />
         <Field label="Day ends" type="time"

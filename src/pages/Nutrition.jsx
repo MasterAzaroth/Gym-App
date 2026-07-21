@@ -128,7 +128,7 @@ export default function Nutrition() {
             <span className="flex items-center gap-1.5 text-[13px] text-label2 tnum">
               {formatTime(dayStart)} – {formatTime(dayEnd)}
               <button
-                onClick={() => navigate('/profile', { state: { openSheet: 'goals' } })}
+                onClick={() => navigate('/profile', { state: { openSheet: 'window' } })}
                 aria-label="Edit day window"
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:bg-fill hover:text-violet"
               >
