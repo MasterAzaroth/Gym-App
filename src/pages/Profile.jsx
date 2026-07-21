@@ -323,24 +323,31 @@ const FIELD_FOR = { protein: 'goal_protein_g', carbs: 'goal_carbs_g', fat: 'goal
 const MACRO_KEYS = ['protein', 'carbs', 'fat']
 
 /** Grams and percentage of calories, both editable — each keeps the other in
-    sync instead of the percentage being a read-only derived label. */
-function MacroField({ label, grams, pct, onGramsChange, onPctChange }) {
+    sync instead of the percentage being a read-only derived label. The kcal
+    figure in between spells out what the gram amount actually costs, so the
+    jump from "180 g" to "30%" isn't left for the user to do in their head. */
+function MacroField({ label, grams, pct, kcal, onGramsChange, onPctChange }) {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5">
       <span className="w-[104px] shrink-0 text-[17px]">{label}</span>
-      <input
-        type="number" inputMode="numeric"
-        value={grams} onChange={onGramsChange}
-        aria-label={`${label} grams`}
-        className="min-w-0 flex-1 bg-transparent text-[17px] tnum placeholder:text-label3 focus:outline-none"
-      />
-      <span className="shrink-0 text-[15px] text-label3">g ·</span>
-      <PercentInput
-        value={pct} onChange={onPctChange}
-        aria-label={`${label} percent of calories`}
-        className="w-10 shrink-0 bg-transparent text-right text-[17px] tnum placeholder:text-label3 focus:outline-none"
-      />
-      <span className="shrink-0 text-[15px] text-label3">%</span>
+      <div className="flex min-w-0 flex-1 items-baseline gap-1">
+        <input
+          type="number" inputMode="numeric"
+          value={grams} onChange={onGramsChange}
+          aria-label={`${label} grams`}
+          className="w-12 min-w-0 shrink-0 bg-transparent text-[17px] tnum placeholder:text-label3 focus:outline-none"
+        />
+        <span className="shrink-0 text-[15px] text-label3">g</span>
+      </div>
+      <span className="shrink-0 text-[13px] text-label3 tnum">{kcal} kcal</span>
+      <div className="flex shrink-0 items-baseline gap-1">
+        <PercentInput
+          value={pct} onChange={onPctChange}
+          aria-label={`${label} percent of calories`}
+          className="w-10 shrink-0 bg-transparent text-right text-[17px] tnum placeholder:text-label3 focus:outline-none"
+        />
+        <span className="shrink-0 text-[15px] text-label3">%</span>
+      </div>
     </div>
   )
 }
@@ -510,10 +517,13 @@ function GoalsSheet({ open, profile, onClose, onSaved }) {
                value={form.goal_kcal ?? ''} onChange={setCalories}
                onFocus={() => { calBasisRef.current = null }} />
         <MacroField label="Protein" grams={form.goal_protein_g ?? ''} pct={pctOf(p, KCAL_PER_G.protein)}
+                    kcal={Math.round(p * KCAL_PER_G.protein)}
                     onGramsChange={setMacroGrams('goal_protein_g')} onPctChange={setMacroPct('protein')} />
         <MacroField label="Carbs" grams={form.goal_carbs_g ?? ''} pct={pctOf(c, KCAL_PER_G.carbs)}
+                    kcal={Math.round(c * KCAL_PER_G.carbs)}
                     onGramsChange={setMacroGrams('goal_carbs_g')} onPctChange={setMacroPct('carbs')} />
         <MacroField label="Fat" grams={form.goal_fat_g ?? ''} pct={pctOf(fat, KCAL_PER_G.fat)}
+                    kcal={Math.round(fat * KCAL_PER_G.fat)}
                     onGramsChange={setMacroGrams('goal_fat_g')} onPctChange={setMacroPct('fat')} />
       </Group>
       <p className="mt-3 px-1 text-[13px] leading-relaxed text-label2">

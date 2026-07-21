@@ -145,7 +145,7 @@ export default function ActiveWorkout() {
             <button
               onClick={() => timer.addTime(-15)}
               disabled={!timer.active}
-              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
+              className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-violet shadow-card disabled:opacity-40"
             >
               -15s
             </button>
@@ -361,22 +361,23 @@ function SetRow({ slot, exerciseId, onLog, onEdit, onRemove }) {
   const [forceEdit, setForceEdit] = useState(false)
 
   if (slot.logged && !forceEdit) {
+    const isWarmup = slot.plan?.is_warmup ?? false
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-fill px-3 py-2.5">
-        <button onClick={() => setForceEdit(true)} className="flex flex-1 items-baseline gap-3 text-left">
-          <span className="w-16 shrink-0 text-[13px] font-medium text-label2">
-            {slot.plan?.is_warmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
+      <div className={`flex items-center gap-2 rounded-lg p-2.5 ${isWarmup ? 'bg-fill' : 'bg-violet-soft'}`}>
+        <button onClick={() => setForceEdit(true)} className="flex flex-1 items-center gap-3 text-left">
+          <span className={`w-16 shrink-0 text-[13px] font-medium ${isWarmup ? 'text-label2' : 'text-violet'}`}>
+            {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
           </span>
-          <span className="text-[15px] font-semibold tnum">
+          <span className="text-[16px] font-semibold tnum">
             {slot.logged.weight_kg ?? 0} kg × {slot.logged.reps ?? 0}
           </span>
         </button>
         <button
           onClick={() => onRemove(slot.logged.id)}
           aria-label="Remove set"
-          className="px-2 text-[16px] text-label3 transition-colors hover:text-danger"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:text-danger"
         >
-          ×
+          <XIcon size={14} />
         </button>
       </div>
     )
@@ -472,9 +473,9 @@ function CheckIcon({ size = 16 }) {
   )
 }
 
-function XIcon() {
+function XIcon({ size = 16 }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round" />
     </svg>

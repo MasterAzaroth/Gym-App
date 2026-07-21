@@ -30,7 +30,14 @@ function write(state) {
 /** Full control — start/stop/extend — scoped to one workout. */
 export function useRestTimer(workoutId) {
   const [stored, setStored] = useState(() => read())
-  const [now, setNow] = useState(Date.now())
+  // A tick counter just forces a re-render every 250ms — the countdown
+  // itself is always computed from a fresh Date.now() below, never from a
+  // timestamp cached in state. Reading "now" from state meant that right
+  // after start()/reset() set a brand new endAt, remaining was computed
+  // against whatever stale "now" the last interval tick had left behind
+  // (up to 250ms old), which rounds up to one extra second — reset looked
+  // like it added a second instead of restoring the exact duration.
+  const [, tick] = useState(0)
   const firedRef = useRef(false)
 
   const endAt = stored?.workoutId === workoutId ? stored.endAt : null
@@ -38,11 +45,11 @@ export function useRestTimer(workoutId) {
   useEffect(() => {
     if (!endAt) return
     firedRef.current = false
-    const id = setInterval(() => setNow(Date.now()), 250)
+    const id = setInterval(() => tick((n) => n + 1), 250)
     return () => clearInterval(id)
   }, [endAt])
 
-  const remaining = endAt ? Math.max(0, Math.ceil((endAt - now) / 1000)) : 0
+  const remaining = endAt ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000)) : 0
 
   useEffect(() => {
     if (endAt && remaining === 0 && !firedRef.current) {
@@ -100,17 +107,13 @@ export function useRestTimer(workoutId) {
     without knowing in advance which workout it belongs to. */
 export function usePeekRestTimer() {
   const [stored, setStored] = useState(() => read())
-  const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setStored(read())
-      setNow(Date.now())
-    }, 1000)
+    const id = setInterval(() => setStored(read()), 1000)
     return () => clearInterval(id)
   }, [])
 
-  const remaining = stored ? Math.max(0, Math.ceil((stored.endAt - now) / 1000)) : 0
+  const remaining = stored ? Math.max(0, Math.ceil((stored.endAt - Date.now()) / 1000)) : 0
   return { active: Boolean(stored) && remaining > 0, remaining, workoutId: stored?.workoutId ?? null }
 }
 
