@@ -9,7 +9,6 @@ import {
   listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout,
   deleteWorkout
 } from '../lib/db'
-import { usePeekRestTimer, formatClock, useElapsedSeconds } from '../lib/restTimer'
 
 export default function Training() {
   const { user } = useAuth()
@@ -17,8 +16,6 @@ export default function Training() {
   const location = useLocation()
   const [tab, setTab] = useState('history')
   const [active, setActive] = useState(null)
-  const restPeek = usePeekRestTimer()
-  const elapsedSeconds = useElapsedSeconds(active?.started_at)
 
   // Picking "Start a workout" from the nav bar's quick-add has nowhere to
   // start a specific routine from, so it lands here instead.
@@ -42,31 +39,12 @@ export default function Training() {
     <>
       <PageTitle eyebrow="Your work">Training</PageTitle>
 
-      {active && (
-        <Card className="mb-5 flex items-center justify-between gap-3 p-4">
-          <div className="min-w-0">
-            <p className="text-[13px] font-medium text-label2 tnum">
-              {restPeek.active && restPeek.workoutId === active.id
-                ? `Resting · ${formatClock(restPeek.remaining)}`
-                : 'Workout in progress'}
-            </p>
-            <p className="truncate text-[17px] font-semibold">
-              {active.name ?? active.routine?.name ?? 'Session'}
-            </p>
-            <p className="text-[12px] text-label2 tnum">{formatClock(elapsedSeconds)}</p>
-          </div>
-          <Button size="sm" onClick={() => navigate(`/train/session/${active.id}`)}>
-            Resume
-          </Button>
-        </Card>
-      )}
-
       <Segmented
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'history',  label: 'History' },
-          { value: 'routines', label: 'Routines' }
+          { value: 'routines', label: 'Routines' },
+          { value: 'history',  label: 'History' }
         ]}
       />
 
@@ -164,7 +142,7 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
-  const [starting, setStarting] = useState(false)
+  const [startingId, setStartingId] = useState(null)
   const nameRef = useAutoFocus(sheetOpen)
 
   const load = useCallback(async () => {
@@ -208,8 +186,8 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
   // Only one workout can be in flight at a time — jump into it rather than
   // starting a second, orphaned one.
   async function handleStart(routineId, routineName) {
-    if (starting) return
-    setStarting(true)
+    if (startingId) return
+    setStartingId(routineId)
     try {
       if (activeWorkoutId) {
         onStart(activeWorkoutId)
@@ -221,7 +199,7 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
     } catch (e) {
       setState((s) => ({ ...s, error: e.message }))
     } finally {
-      setStarting(false)
+      setStartingId(null)
     }
   }
 
@@ -250,11 +228,15 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleStart(r.id, r.name) }}
-                      disabled={starting}
+                      disabled={Boolean(startingId)}
                       aria-label="Start routine"
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-violet transition-colors hover:bg-violet-soft disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-violet transition-colors active:bg-violet-soft hover:bg-violet-soft disabled:opacity-40"
                     >
-                      <Play size={18} strokeWidth={1.8} />
+                      <Play
+                        size={18}
+                        strokeWidth={1.8}
+                        fill={startingId === r.id ? 'currentColor' : 'none'}
+                      />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(r.id, r.name) }}

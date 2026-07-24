@@ -64,7 +64,7 @@ export default function Profile() {
 
   return (
     <>
-      <PageTitle eyebrow="Account">Profile</PageTitle>
+      <PageTitle>Profile</PageTitle>
 
       {/* Identity */}
       <Card className="mb-6 flex items-center gap-4 p-5">
@@ -78,6 +78,15 @@ export default function Profile() {
           <p className="truncate text-[15px] text-label2">{user?.email}</p>
         </div>
       </Card>
+
+      {/* Account */}
+      <Section title="Account">
+        <Group>
+          <Row label="Personal details" onClick={() => setSheet('account')} />
+          <Row label="Change password" onClick={() => alert('Password reset is coming next.')} />
+          <Row label="Export my data"  onClick={() => alert('Data export is coming next.')} />
+        </Group>
+      </Section>
 
       {/* Plan */}
       <Section title="Plan">
@@ -155,15 +164,6 @@ export default function Profile() {
             { value: 'system', label: 'Auto' }
           ]}
         />
-      </Section>
-
-      {/* Account */}
-      <Section title="Account">
-        <Group>
-          <Row label="Personal details" onClick={() => setSheet('account')} />
-          <Row label="Change password" onClick={() => alert('Password reset is coming next.')} />
-          <Row label="Export my data"  onClick={() => alert('Data export is coming next.')} />
-        </Group>
       </Section>
 
       <Section title="About">

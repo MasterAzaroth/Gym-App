@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Apple } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Sheet } from './ui'
 import FoodAddSheet from './FoodAddSheet'
@@ -8,9 +7,6 @@ import WeightLogSheet from './WeightLogSheet'
 import { dayWindow, defaultLoggedTime, toISODate } from '../lib/nutrition'
 
 const LEFT_TABS = [
-  // TEMPORARY — icon audit page, remove this tab (and its route in
-  // App.jsx) once the lucide-react comparison is done.
-  { to: '/icons', label: 'Icons',    icon: IconTest },
   { to: '/',      label: 'Insights', icon: IconInsights, end: true },
   { to: '/train', label: 'Training', icon: IconTrain }
 ]
@@ -146,9 +142,6 @@ const base = {
 }
 const w = (active) => ({ ...base, strokeWidth: active ? 2.2 : 1.7 })
 
-function IconTest({ active }) {
-  return <svg {...w(active)}><path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M8 14h8" /></svg>
-}
 function IconTrain({ active }) {
   return <svg {...w(active)}><path d="M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10"/></svg>
 }
@@ -156,13 +149,18 @@ function IconInsights({ active }) {
   return <svg {...w(active)}><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4.5L15 14l4-6"/></svg>
 }
 function IconNutrition({ active }) {
-  return <Apple width={23} height={23} strokeWidth={active ? 2.2 : 1.7} />
+  return <svg {...w(active)}><path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/><path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/></svg>
 }
 function IconProfile({ active }) {
   return <svg {...w(active)}><circle cx="12" cy="8" r="3.75"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
 }
 function IconFoodAction() {
-  return <Apple width={22} height={22} strokeWidth={1.8} />
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/>
+      <path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/>
+    </svg>
+  )
 }
 function IconWeightAction() {
   return (
