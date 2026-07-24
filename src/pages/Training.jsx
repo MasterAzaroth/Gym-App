@@ -8,7 +8,7 @@ import {
   listWorkouts, listRoutines, createRoutine, deleteRoutine, getActiveWorkout, createWorkout,
   deleteWorkout
 } from '../lib/db'
-import { usePeekRestTimer, formatClock } from '../lib/restTimer'
+import { usePeekRestTimer, formatClock, useElapsedSeconds } from '../lib/restTimer'
 
 export default function Training() {
   const { user } = useAuth()
@@ -17,6 +17,7 @@ export default function Training() {
   const [tab, setTab] = useState('history')
   const [active, setActive] = useState(null)
   const restPeek = usePeekRestTimer()
+  const elapsedSeconds = useElapsedSeconds(active?.started_at)
 
   // Picking "Start a workout" from the nav bar's quick-add has nowhere to
   // start a specific routine from, so it lands here instead.
@@ -51,6 +52,7 @@ export default function Training() {
             <p className="truncate text-[17px] font-semibold">
               {active.name ?? active.routine?.name ?? 'Session'}
             </p>
+            <p className="text-[12px] text-label2 tnum">{formatClock(elapsedSeconds)}</p>
           </div>
           <Button size="sm" onClick={() => navigate(`/train/session/${active.id}`)}>
             Resume

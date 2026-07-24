@@ -4,7 +4,7 @@ import { Card, Button, Spinner, ErrorNote } from '../components/ui'
 import {
   getWorkout, getRoutine, finishWorkout, deleteWorkout, addSet, updateSet, deleteSet
 } from '../lib/db'
-import { useRestTimer, formatClock } from '../lib/restTimer'
+import { useRestTimer, formatClock, useElapsedSeconds } from '../lib/restTimer'
 
 export default function ActiveWorkout() {
   const { id } = useParams()
@@ -121,7 +121,7 @@ export default function ActiveWorkout() {
             {workout.name ?? 'Workout'}
           </h1>
           <p className="text-[12px] text-label2 tnum">
-            <ElapsedMinutes since={workout.started_at} /> min
+            <ElapsedClock since={workout.started_at} />
           </p>
         </div>
         <button
@@ -185,6 +185,7 @@ export default function ActiveWorkout() {
             exercise={ex}
             active={ex.exerciseId === activeExercise?.exerciseId}
             done={isExerciseDone(ex)}
+            started={isExerciseStarted(ex)}
             onClick={() => setActiveExerciseId(ex.exerciseId)}
           />
         ))}
@@ -285,6 +286,12 @@ function isExerciseDone(exercise) {
   return planned.length > 0 && planned.every((s) => s.logged)
 }
 
+/** At least one set logged, but not (yet) every planned set — mid-exercise,
+    as opposed to untouched or finished. */
+function isExerciseStarted(exercise) {
+  return exercise.slots.some((s) => s.logged)
+}
+
 /** "Lat pulldown" -> "LP", "Dip" -> "DI". Two letters read as a badge at a
     glance; a full name at that size doesn't. */
 function initials(name) {
@@ -295,7 +302,7 @@ function initials(name) {
 
 /* ----------------------------------------------------------------- exercise tab */
 
-function ExerciseTab({ exercise, active, done, onClick }) {
+function ExerciseTab({ exercise, active, done, started, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -303,7 +310,13 @@ function ExerciseTab({ exercise, active, done, onClick }) {
       aria-current={active ? 'true' : undefined}
       className={[
         'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold tnum transition-colors',
-        active ? 'bg-violet text-white' : done ? 'bg-violet-soft text-violet' : 'bg-surface text-label2 shadow-card'
+        active
+          ? 'bg-violet text-white'
+          : done
+          ? 'bg-violet-soft text-violet'
+          : started
+          ? 'bg-surface text-violet shadow-card ring-2 ring-violet/50'
+          : 'bg-surface text-label2 shadow-card'
       ].join(' ')}
     >
       {initials(exercise.exerciseName)}
@@ -322,6 +335,7 @@ function ExercisePanel({ exercise, nextExercise, onLog, onEdit, onRemove, onAddS
   const nextIndex = exercise.slots.length
     ? Math.max(...exercise.slots.map((s) => s.setIndex)) + 1
     : 0
+  const done = isExerciseDone(exercise)
 
   return (
     <Card className="p-4">
@@ -349,7 +363,10 @@ function ExercisePanel({ exercise, nextExercise, onLog, onEdit, onRemove, onAddS
         {nextExercise && (
           <button
             onClick={onNext}
-            className="flex min-w-0 items-center gap-1 rounded-full bg-fill px-3.5 py-2 text-[13px] font-semibold text-label2 transition-colors hover:bg-separator"
+            className={[
+              'flex min-w-0 items-center gap-1 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors',
+              done ? 'bg-violet text-white hover:bg-violet-hover' : 'bg-fill text-label2 hover:bg-separator'
+            ].join(' ')}
           >
             <span className="min-w-0 truncate">Next: {nextExercise.exerciseName}</span>
             <span aria-hidden="true" className="shrink-0">→</span>
@@ -368,12 +385,16 @@ function SetRow({ slot, exerciseId, onLog, onEdit, onRemove }) {
     return (
       <div className={`rounded-lg p-2.5 ${isWarmup ? 'bg-tile' : 'bg-violet-soft'}`}>
         <div className="flex h-8 items-center gap-2">
-          <button onClick={() => setForceEdit(true)} className="flex h-8 flex-1 items-center gap-3 text-left">
+          <button onClick={() => setForceEdit(true)} className="flex h-8 flex-1 items-center gap-2 text-left">
             <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
               {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
             </span>
+            <span className="w-16 shrink-0 text-center text-[16px] font-semibold leading-none tnum">
+              {slot.logged.weight_kg ?? 0} kg
+            </span>
+            <span className="shrink-0 leading-none text-label3">×</span>
             <span className="text-[16px] font-semibold leading-none tnum">
-              {slot.logged.weight_kg ?? 0} kg × {slot.logged.reps ?? 0}
+              {slot.logged.reps ?? 0} reps
             </span>
           </button>
           <button
@@ -455,13 +476,8 @@ function SetInputRow({ slot, exerciseId, onLog, onEdit, onDone }) {
   )
 }
 
-function ElapsedMinutes({ since }) {
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30000)
-    return () => clearInterval(id)
-  }, [])
-  return Math.max(0, Math.round((now - new Date(since).getTime()) / 60000))
+function ElapsedClock({ since }) {
+  return formatClock(useElapsedSeconds(since))
 }
 
 function CheckIcon({ size = 16 }) {

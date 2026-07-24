@@ -122,3 +122,17 @@ export function formatClock(totalSeconds) {
   const s = totalSeconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
+
+/** Live seconds-since-start, ticking every second — the workout duration
+    clock, both inside the session and on the "Resume" card outside it. */
+export function useElapsedSeconds(since) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (!since) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [since])
+
+  if (!since) return 0
+  return Math.max(0, Math.floor((now - new Date(since).getTime()) / 1000))
+}
