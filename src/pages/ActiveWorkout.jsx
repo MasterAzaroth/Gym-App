@@ -124,7 +124,10 @@ export default function ActiveWorkout() {
             <ElapsedMinutes since={workout.started_at} /> min
           </p>
         </div>
-        <button onClick={cancelWorkout} className="shrink-0 text-[13px] font-medium text-danger">
+        <button
+          onClick={cancelWorkout}
+          className="shrink-0 rounded-full bg-danger/10 px-3.5 py-2 text-[13px] font-semibold text-danger transition-colors hover:bg-danger/15"
+        >
           Cancel
         </button>
       </div>
@@ -336,20 +339,20 @@ function ExercisePanel({ exercise, nextExercise, onLog, onEdit, onRemove, onAddS
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between gap-2">
         <button
           onClick={() => onAddSlot(exercise.exerciseId, nextIndex)}
-          className="text-[13px] font-medium text-violet"
+          className="rounded-full bg-violet-soft px-3.5 py-2 text-[13px] font-semibold text-violet transition-colors hover:bg-violet-soft/70"
         >
           + Add set
         </button>
         {nextExercise && (
           <button
             onClick={onNext}
-            className="flex items-center gap-1 text-[13px] font-medium text-label2"
+            className="flex min-w-0 items-center gap-1 rounded-full bg-fill px-3.5 py-2 text-[13px] font-semibold text-label2 transition-colors hover:bg-separator"
           >
-            Next: {nextExercise.exerciseName}
-            <span aria-hidden="true">→</span>
+            <span className="min-w-0 truncate">Next: {nextExercise.exerciseName}</span>
+            <span aria-hidden="true" className="shrink-0">→</span>
           </button>
         )}
       </div>
