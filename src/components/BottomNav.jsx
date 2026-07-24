@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { Apple } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Sheet } from './ui'
 import FoodAddSheet from './FoodAddSheet'
@@ -155,18 +156,13 @@ function IconInsights({ active }) {
   return <svg {...w(active)}><path d="M4 19V5M4 19h16"/><path d="M8 15l3.5-4.5L15 14l4-6"/></svg>
 }
 function IconNutrition({ active }) {
-  return <svg {...w(active)}><path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/><path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/></svg>
+  return <Apple width={23} height={23} strokeWidth={active ? 2.2 : 1.7} />
 }
 function IconProfile({ active }) {
   return <svg {...w(active)}><circle cx="12" cy="8" r="3.75"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
 }
 function IconFoodAction() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 8c0-2.2 1.8-4 4-4 .6 0 1 .4 1 1 0 2.2-1.8 4-4 4"/>
-      <path d="M12 20c-3.3 0-6-3.1-6-7 0-2.8 2-4.5 4-4.5 1 0 1.6.4 2 .8.4-.4 1-.8 2-.8 2 0 4 1.7 4 4.5 0 3.9-2.7 7-6 7z"/>
-    </svg>
-  )
+  return <Apple width={22} height={22} strokeWidth={1.8} />
 }
 function IconWeightAction() {
   return (

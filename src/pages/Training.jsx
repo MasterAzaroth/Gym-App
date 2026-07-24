@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { Play, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {
   PageTitle, Card, Group, Row, Segmented, Empty, Spinner, ErrorNote, Button, Sheet, Field, useAutoFocus
@@ -156,25 +157,6 @@ function History({ userId, onOpen }) {
   )
 }
 
-function PlayIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-      <path d="M4 2.8v10.4a.8.8 0 0 0 1.22.68l8.3-5.2a.8.8 0 0 0 0-1.36l-8.3-5.2A.8.8 0 0 0 4 2.8Z"
-            fill="currentColor" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-      <path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5l.6 8.4a1 1 0 0 0 1 .93h3.8a1 1 0 0 0 1-.93l.6-8.4"
-            stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6.5 7v4M9.5 7v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 /* ----------------------------------------------------------------- routines */
 
 function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
@@ -272,14 +254,14 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
                       aria-label="Start routine"
                       className="flex h-9 w-9 items-center justify-center rounded-full text-violet transition-colors hover:bg-violet-soft disabled:opacity-40"
                     >
-                      <PlayIcon />
+                      <Play size={18} strokeWidth={1.8} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(r.id, r.name) }}
                       aria-label="Delete routine"
                       className="flex h-9 w-9 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-danger"
                     >
-                      <TrashIcon />
+                      <Trash2 size={18} strokeWidth={1.8} />
                     </button>
                   </div>
                 }

@@ -389,7 +389,7 @@ function SetRow({ slot, exerciseId, onLog, onEdit, onRemove }) {
             <span className={`w-16 shrink-0 text-[13px] font-medium leading-none ${isWarmup ? 'text-label2' : 'text-violet'}`}>
               {isWarmup ? 'Warm-up' : `Set ${slot.setIndex + 1}`}
             </span>
-            <span className="w-16 shrink-0 text-center text-[16px] font-semibold leading-none tnum">
+            <span className="w-16 shrink-0 text-right text-[16px] font-semibold leading-none tnum">
               {slot.logged.weight_kg ?? 0} kg
             </span>
             <span className="shrink-0 leading-none text-label3">×</span>

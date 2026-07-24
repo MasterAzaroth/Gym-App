@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
 import {
   PageTitle, Card, Group, Button, Sheet, Spinner, ErrorNote, Empty, Row
 } from '../components/ui'
@@ -138,14 +139,14 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
             aria-label="Edit sets"
             className="flex h-8 w-8 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-violet"
           >
-            <EditIcon />
+            <Pencil size={16} strokeWidth={1.8} />
           </button>
           <button
             onClick={onRemove}
             aria-label="Remove exercise"
             className="flex h-8 w-8 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-danger"
           >
-            <TrashIcon />
+            <Trash2 size={16} strokeWidth={1.8} />
           </button>
         </div>
       </div>
@@ -178,24 +179,6 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
   )
 }
 
-function EditIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-      <path d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7-3 .7.7-3 7-7.1Z"
-            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-      <path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5l.6 8.4a1 1 0 0 0 1 .93h3.8a1 1 0 0 0 1-.93l.6-8.4"
-            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6.5 7v4M9.5 7v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  )
-}
 
 /* --------------------------------------------------------------- sets sheet */
 

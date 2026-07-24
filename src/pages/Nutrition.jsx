@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {
   Card, Group, Button, Sheet, Field, Spinner, ErrorNote, Chevron, Macro
@@ -132,7 +133,7 @@ export default function Nutrition() {
                 aria-label="Edit day window"
                 className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-label3 transition-colors hover:bg-fill hover:text-violet"
               >
-                <EditIcon />
+                <Pencil size={13} strokeWidth={1.8} />
               </button>
             </span>
           </div>
@@ -170,15 +171,6 @@ export default function Nutrition() {
         onSaved={() => { setEditing(null); load() }}
       />
     </>
-  )
-}
-
-function EditIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-      <path d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7-3 .7.7-3 7-7.1Z"
-            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   )
 }
 
