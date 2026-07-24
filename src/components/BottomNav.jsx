@@ -7,6 +7,9 @@ import WeightLogSheet from './WeightLogSheet'
 import { dayWindow, defaultLoggedTime, toISODate } from '../lib/nutrition'
 
 const LEFT_TABS = [
+  // TEMPORARY — icon audit page, remove this tab (and its route in
+  // App.jsx) once the lucide-react comparison is done.
+  { to: '/icons', label: 'Icons',    icon: IconTest },
   { to: '/',      label: 'Insights', icon: IconInsights, end: true },
   { to: '/train', label: 'Training', icon: IconTrain }
 ]
@@ -142,6 +145,9 @@ const base = {
 }
 const w = (active) => ({ ...base, strokeWidth: active ? 2.2 : 1.7 })
 
+function IconTest({ active }) {
+  return <svg {...w(active)}><path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M8 14h8" /></svg>
+}
 function IconTrain({ active }) {
   return <svg {...w(active)}><path d="M4 9.5v5M7 7v10M17 7v10M20 9.5v5M7 12h10"/></svg>
 }

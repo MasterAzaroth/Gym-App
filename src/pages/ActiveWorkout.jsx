@@ -147,7 +147,7 @@ export default function ActiveWorkout() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => timer.addTime(-15)}
-              disabled={!timer.active}
+              disabled={!timer.running}
               className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-violet shadow-card disabled:opacity-40"
             >
               -15s
@@ -160,14 +160,14 @@ export default function ActiveWorkout() {
             </button>
             <button
               onClick={timer.reset}
-              disabled={!timer.active}
+              disabled={!timer.started}
               className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
             >
               Reset
             </button>
             <button
               onClick={timer.stop}
-              disabled={!timer.active}
+              disabled={!timer.running}
               className="rounded-lg bg-surface px-2.5 py-2 text-[13px] font-semibold text-label2 shadow-card disabled:opacity-40"
             >
               Skip

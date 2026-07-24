@@ -40,16 +40,27 @@ export function useRestTimer(workoutId) {
   const [, tick] = useState(0)
   const firedRef = useRef(false)
 
-  const endAt = stored?.workoutId === workoutId ? stored.endAt : null
+  // Kept around even after the rest ends, is skipped, or is wound down by
+  // -15s — Reset needs `duration` to restore the last rest length, and
+  // should never grey out again once a rest has run at all this workout.
+  const record = stored?.workoutId === workoutId ? stored : null
+  const endAt = record?.endAt ?? null
 
   useEffect(() => {
     if (!endAt) return
     firedRef.current = false
-    const id = setInterval(() => tick((n) => n + 1), 250)
+    const id = setInterval(() => {
+      tick((n) => n + 1)
+      // Self-terminating: once the rest has actually elapsed there's
+      // nothing left to count down, so stop polling every 250ms for the
+      // remainder of the workout instead of ticking forever.
+      if (Date.now() >= endAt) clearInterval(id)
+    }, 250)
     return () => clearInterval(id)
   }, [endAt])
 
   const remaining = endAt ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000)) : 0
+  const running = remaining > 0
 
   useEffect(() => {
     if (endAt && remaining === 0 && !firedRef.current) {
@@ -59,7 +70,11 @@ export function useRestTimer(workoutId) {
   }, [remaining, endAt])
 
   return {
-    active: Boolean(endAt),
+    // True only while actually counting down — drives -15s/Skip.
+    running,
+    // True once a rest has ever been started for this workout, even after
+    // it finishes or is skipped — drives Reset.
+    started: Boolean(record),
     remaining,
     start: (seconds) => {
       const next = { workoutId, endAt: Date.now() + seconds * 1000, duration: seconds }
@@ -67,8 +82,12 @@ export function useRestTimer(workoutId) {
       setStored(next)
     },
     stop: () => {
-      write(null)
-      setStored(null)
+      setStored((s) => {
+        if (!s || s.workoutId !== workoutId) return s
+        const next = { ...s, endAt: Date.now() }
+        write(next)
+        return next
+      })
     },
     // Positive deltas also work with no timer running yet — the button
     // doubles as "start a rest" when tapped from idle, which is how the
@@ -82,10 +101,6 @@ export function useRestTimer(workoutId) {
           return next
         }
         const remainingMs = Math.max(0, s.endAt - Date.now() + delta * 1000)
-        if (remainingMs <= 0) {
-          write(null)
-          return null
-        }
         const next = { ...s, endAt: Date.now() + remainingMs }
         write(next)
         return next
