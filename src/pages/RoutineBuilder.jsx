@@ -144,7 +144,7 @@ function ExerciseCard({ index, item, onEdit, onRemove }) {
           <button
             onClick={onRemove}
             aria-label="Remove exercise"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-danger"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-danger transition-colors hover:bg-danger/10"
           >
             <Trash2 size={16} strokeWidth={1.8} />
           </button>

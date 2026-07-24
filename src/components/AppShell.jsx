@@ -10,13 +10,21 @@ import { usePeekRestTimer, formatClock, useElapsedSeconds } from '../lib/restTim
 
 // Routes that take over the whole screen — no tab bar, no setup banner. A
 // live workout session is meant to read like MacroFactor's logging screens,
-// not like another tab of the app.
-const IMMERSIVE_PREFIXES = ['/train/session/']
+// not like another tab of the app. A drill-down settings page (e.g. Personal
+// details) is the same idea for a different reason — it's a push onto that
+// tab's own stack, so the tab bar and banners it left behind shouldn't still
+// be sitting there.
+const IMMERSIVE_PREFIXES = ['/train/session/', '/profile/personal-details']
+
+// Of those, the ones that should slide in from the right like a native
+// navigation push, rather than fade-and-rise like a normal tab switch.
+const DETAIL_PREFIXES = ['/profile/personal-details']
 
 export default function AppShell() {
   const { pathname } = useLocation()
   const scroller = useRef(null)
   const immersive = IMMERSIVE_PREFIXES.some((p) => pathname.startsWith(p))
+  const detail = DETAIL_PREFIXES.some((p) => pathname.startsWith(p))
 
   // Scroll lives on <main>, not the document, so reset that element.
   useEffect(() => { scroller.current?.scrollTo(0, 0) }, [pathname])
@@ -42,7 +50,7 @@ export default function AppShell() {
               : '1.5rem'
           }}
         >
-          <div key={pathname} className="page-enter">
+          <div key={pathname} className={detail ? 'detail-enter' : 'page-enter'}>
             <Outlet />
           </div>
         </div>

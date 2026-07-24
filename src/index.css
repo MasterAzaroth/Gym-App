@@ -87,6 +87,15 @@ body {
 }
 .page-enter { animation: page-in 260ms cubic-bezier(0.32, 0.72, 0, 1); }
 
+/* A drill-down sub-page (e.g. Profile -> Personal details) reads as a push
+   onto a navigation stack, not just another tab — it slides in from the
+   right instead of fading up in place. */
+@keyframes detail-in {
+  from { transform: translate3d(100%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+.detail-enter { animation: detail-in 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+
 @keyframes sheet-in {
   from { transform: translate3d(0, 100%, 0); }
   to   { transform: translate3d(0, 0, 0); }

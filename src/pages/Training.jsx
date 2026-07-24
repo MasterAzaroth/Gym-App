@@ -241,7 +241,7 @@ function Routines({ userId, activeWorkoutId, onOpen, onStart, onStarted }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(r.id, r.name) }}
                       aria-label="Delete routine"
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-label2 transition-colors hover:bg-fill hover:text-danger"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-danger transition-colors hover:bg-danger/10"
                     >
                       <Trash2 size={18} strokeWidth={1.8} />
                     </button>

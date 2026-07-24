@@ -25,7 +25,7 @@ export default function Profile() {
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [sheet, setSheet] = useState(null)   // 'account' | 'training' | 'goals' | 'window' | 'weight'
+  const [sheet, setSheet] = useState(null)   // 'training' | 'goals' | 'window' | 'weight'
 
   // Arriving from elsewhere (e.g. the nutrition tab's day-window edit
   // button) can request a sheet open immediately, without a stale link
@@ -79,15 +79,6 @@ export default function Profile() {
         </div>
       </Card>
 
-      {/* Account */}
-      <Section title="Account">
-        <Group>
-          <Row label="Personal details" onClick={() => setSheet('account')} />
-          <Row label="Change password" onClick={() => alert('Password reset is coming next.')} />
-          <Row label="Export my data"  onClick={() => alert('Data export is coming next.')} />
-        </Group>
-      </Section>
-
       {/* Plan */}
       <Section title="Plan">
         <Card className="p-5">
@@ -108,6 +99,15 @@ export default function Profile() {
         </Card>
       </Section>
 
+      {/* Account */}
+      <Section title="Account">
+        <Group>
+          <Row label="Personal details" onClick={() => navigate('/profile/personal-details')} />
+          <Row label="Change password" onClick={() => alert('Password reset is coming next.')} />
+          <Row label="Export my data"  onClick={() => alert('Data export is coming next.')} />
+        </Group>
+      </Section>
+
       {/* Body */}
       <Section title="Body">
         <Group>
@@ -125,7 +125,7 @@ export default function Profile() {
           <Row
             label="Height"
             value={profile?.height_cm ? `${profile.height_cm} cm` : '—'}
-            onClick={() => setSheet('account')}
+            onClick={() => navigate('/profile/personal-details')}
           />
         </Group>
       </Section>
@@ -185,11 +185,6 @@ export default function Profile() {
       </div>
 
       {/* Sheets */}
-      <AccountSheet
-        open={sheet === 'account'} profile={profile}
-        onClose={() => setSheet(null)}
-        onSaved={() => { setSheet(null); load() }}
-      />
       <TrainingSheet
         open={sheet === 'training'} profile={profile}
         onClose={() => setSheet(null)}
@@ -226,64 +221,6 @@ function Section({ title, children }) {
 }
 
 /* ------------------------------------------------------------------- sheets */
-
-function AccountSheet({ open, profile, onClose, onSaved }) {
-  const [form, set] = useForm(open, {
-    display_name: profile?.display_name ?? '',
-    sex:          profile?.sex ?? '',
-    birth_date:   profile?.birth_date ?? '',
-    height_cm:    profile?.height_cm ?? '',
-    goal:         profile?.goal ?? ''
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  async function save() {
-    setSaving(true); setError(null)
-    try {
-      await updateProfile(profile.id, {
-        display_name: form.display_name?.trim() || null,
-        sex:          form.sex || null,
-        birth_date:   form.birth_date || null,
-        height_cm:    form.height_cm ? Number(form.height_cm) : null,
-        goal:         form.goal || null
-      })
-      onSaved()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Personal details"
-           footer={<Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>}>
-      {error && <div className="mb-3"><ErrorNote error={error} /></div>}
-      <Group className="mt-2">
-        <Field label="Name" placeholder="Leonard" value={form.display_name ?? ''} onChange={set('display_name')} />
-        <SelectField label="Sex" value={form.sex ?? ''} onChange={set('sex')} options={[
-          { value: '', label: 'Not set' },
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' }
-        ]} />
-        <Field label="Birth date" type="date" value={form.birth_date ?? ''} onChange={set('birth_date')} />
-        <Field label="Height" type="number" inputMode="decimal" suffix="cm"
-               value={form.height_cm ?? ''} onChange={set('height_cm')} />
-      </Group>
-
-      <Group className="mt-4">
-        <SelectField label="Goal" value={form.goal ?? ''} onChange={set('goal')} options={[
-          { value: '', label: 'Not set' },
-          { value: 'build', label: 'Build muscle' },
-          { value: 'lean', label: 'Lose body fat' },
-          { value: 'maintain', label: 'Maintain' }
-        ]} />
-      </Group>
-    </Sheet>
-  )
-}
 
 function TrainingSheet({ open, profile, onClose, onSaved }) {
   const [form, set] = useForm(open, {

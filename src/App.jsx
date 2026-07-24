@@ -9,6 +9,7 @@ import ActiveWorkout from './pages/ActiveWorkout'
 import WorkoutDetail from './pages/WorkoutDetail'
 import Nutrition from './pages/Nutrition'
 import Profile from './pages/Profile'
+import PersonalDetails from './pages/PersonalDetails'
 
 export default function App() {
   const { user, loading, isConfigured } = useAuth()
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="train/workout/:id" element={<WorkoutDetail />} />
           <Route path="nutrition" element={<Nutrition />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="profile/personal-details" element={<PersonalDetails />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
