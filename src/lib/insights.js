@@ -89,45 +89,52 @@ export function computeMuscleGroupBreakdown(sets, { sinceDays = 28 } = {}) {
     .sort((a, b) => b.value - a.value)
 }
 
-/** Consecutive Mon–Sun weeks containing at least one finished workout.
-    `currentWeeks` counts back from this week, but treats a week still in
-    progress as "not yet broken" if it has no session yet — only a fully
-    missed week ends the streak. `longestWeeks` scans the whole dataset. */
-export function computeStreak(workouts) {
-  const weekKeys = new Set(
-    workouts.map((w) => toISODate(startOfWeek(new Date(w.started_at))))
-  )
-  if (weekKeys.size === 0) return { currentWeeks: 0, longestWeeks: 0 }
+/** Same breakdown as computeMuscleGroupBreakdown, expressed as an average
+    per week rather than a raw total — replaces separately showing "total
+    volume over 4 weeks" and "total volume this week" with the one number
+    that answers both: how much of each muscle you're training per week,
+    on average, right now. */
+export function computeMuscleGroupWeeklyAvg(sets, { weeks = 4 } = {}) {
+  return computeMuscleGroupBreakdown(sets, { sinceDays: weeks * 7 })
+    .map((t) => ({ ...t, value: Math.round(t.value / weeks) }))
+}
 
-  const thisWeekStart = startOfWeek(new Date())
-  const hasWeek = (weekStart) => weekKeys.has(toISODate(weekStart))
+/** Consecutive calendar days containing at least one finished workout.
+    `currentDays` counts back from today, but treats today as "not yet
+    broken" if it has no session yet — only a fully missed day ends the
+    streak. `longestDays` scans the whole dataset. */
+export function computeDailyStreak(workouts) {
+  const dayKeys = new Set(workouts.map((w) => toISODate(new Date(w.started_at))))
+  if (dayKeys.size === 0) return { currentDays: 0, longestDays: 0 }
 
-  let currentWeeks = 0
-  let cursor = hasWeek(thisWeekStart) ? thisWeekStart : addDays(thisWeekStart, -7)
-  while (hasWeek(cursor)) {
-    currentWeeks += 1
-    cursor = addDays(cursor, -7)
+  const today = new Date()
+  const hasDay = (date) => dayKeys.has(toISODate(date))
+
+  let currentDays = 0
+  let cursor = hasDay(today) ? today : addDays(today, -1)
+  while (hasDay(cursor)) {
+    currentDays += 1
+    cursor = addDays(cursor, -1)
   }
 
-  const sortedKeys = Array.from(weekKeys).sort()
-  let longestWeeks = 0
+  const sortedKeys = Array.from(dayKeys).sort()
+  let longestDays = 0
   let runLength = 0
   let prevKey = null
   for (const key of sortedKeys) {
-    runLength = prevKey && toISODate(addDays(new Date(prevKey), 7)) === key ? runLength + 1 : 1
-    longestWeeks = Math.max(longestWeeks, runLength)
+    runLength = prevKey && toISODate(addDays(new Date(prevKey), 1)) === key ? runLength + 1 : 1
+    longestDays = Math.max(longestDays, runLength)
     prevKey = key
   }
 
-  return { currentWeeks, longestWeeks }
+  return { currentDays, longestDays }
 }
 
-/** Estimated 1RM (Epley: weight * (1 + reps/30)) trend for the exercises
-    trained most often in the trailing `sinceDays` days. Ranks by distinct
-    training days (frequency), tie-broken by total volume, and drops any
-    exercise with fewer than 2 qualifying days since a single point isn't a
-    trend. One point per day: that day's best working-set estimate. */
-export function computeEstimated1RmTrend(sets, { topN = 3, sinceDays = 90 } = {}) {
+/** Exercises with at least 2 qualifying training days in the trailing
+    `sinceDays` days, ranked by frequency (distinct days) then volume —
+    powers the strength-development exercise picker with the lifts that
+    actually have enough history to plot a trend. */
+export function rankTrainedExercises(sets, { sinceDays = 90 } = {}) {
   const cutoff = addDays(new Date(), -sinceDays)
   const byExercise = new Map()
 
@@ -142,48 +149,89 @@ export function computeEstimated1RmTrend(sets, { topN = 3, sinceDays = 90 } = {}
     if (!exerciseId) continue
 
     if (!byExercise.has(exerciseId)) {
-      byExercise.set(exerciseId, { label: s.exercise?.name ?? 'Exercise', volume: 0, dayMax: new Map() })
+      byExercise.set(exerciseId, { id: exerciseId, name: s.exercise?.name ?? 'Exercise', volume: 0, days: new Set() })
     }
     const entry = byExercise.get(exerciseId)
     entry.volume += weight * reps
+    entry.days.add(toISODate(new Date(started)))
+  }
+
+  return Array.from(byExercise.values())
+    .filter((e) => e.days.size >= 2)
+    .sort((a, b) => b.days.size - a.days.size || b.volume - a.volume)
+    .map((e) => ({ id: e.id, name: e.name }))
+}
+
+/** Three views of one exercise's progression, one point per training day
+    (that day's heaviest qualifying working set): the actual weight lifted,
+    a trailing `averageWindow`-session moving average of it, and the Epley-
+    estimated 1RM (weight * (1 + reps/30)) — which can come from a different,
+    higher-rep set than the day's heaviest, since a lighter set for more reps
+    sometimes implies more raw strength than the top single. */
+export function computeStrengthDevelopment(sets, exerciseId, { sinceDays = 90, averageWindow = 3 } = {}) {
+  const cutoff = addDays(new Date(), -sinceDays)
+  const byDay = new Map()
+
+  for (const s of sets) {
+    if (s.is_warmup) continue
+    if (s.exercise?.id !== exerciseId) continue
+    const started = s.workout?.started_at
+    if (!started || new Date(started) < cutoff) continue
+    const weight = Number(s.weight_kg) || 0
+    const reps = Number(s.reps) || 0
+    if (weight <= 0 || reps <= 0) continue
 
     const dayISO = toISODate(new Date(started))
     const e1rm = weight * (1 + reps / 30)
-    const prev = entry.dayMax.get(dayISO)
-    if (!prev || e1rm > prev.e1rm) entry.dayMax.set(dayISO, { date: new Date(started), e1rm })
+    const entry = byDay.get(dayISO) ?? { date: new Date(started), weight: 0, e1rm: 0 }
+    entry.weight = Math.max(entry.weight, weight)
+    entry.e1rm = Math.max(entry.e1rm, e1rm)
+    byDay.set(dayISO, entry)
   }
 
-  return Array.from(byExercise, ([id, e]) => ({ id, ...e }))
-    .filter((e) => e.dayMax.size >= 2)
-    .sort((a, b) => b.dayMax.size - a.dayMax.size || b.volume - a.volume)
-    .slice(0, topN)
-    .map((e) => ({
-      id: e.id,
-      label: e.label,
-      points: Array.from(e.dayMax.values())
-        .sort((a, b) => a.date - b.date)
-        .map((d) => ({ x: d.date, y: Math.round(d.e1rm) }))
-    }))
+  const days = Array.from(byDay.values()).sort((a, b) => a.date - b.date)
+
+  const actual = days.map((d) => ({ x: d.date, y: Math.round(d.weight * 4) / 4 }))
+  const estimate = days.map((d) => ({ x: d.date, y: Math.round(d.e1rm) }))
+  const average = days.map((d, i) => {
+    const window = days.slice(Math.max(0, i - averageWindow + 1), i + 1)
+    const avg = window.reduce((sum, w) => sum + w.weight, 0) / window.length
+    return { x: d.date, y: Math.round(avg * 4) / 4 }
+  })
+
+  return { actual, average, estimate }
 }
 
 /* ---------------------------------------------------------- nutrition & body */
 
-/** Zero-filled daily calorie totals over the trailing `days` days, oldest
-    first — a day with nothing logged still shows a zero bar. */
-export function computeDailyCalories(nutrition, { days = 14 } = {}) {
+/** Zero-filled daily kcal + macro totals over the trailing `days` days,
+    oldest first — a day with nothing logged still shows a zero bar rather
+    than disappearing from the axis. Powers the stacked calories/macros
+    chart, where each day's bar is split into its protein/carbs/fat
+    contribution rather than shown as one flat total. */
+export function computeDailyMacros(nutrition, { days = 14 } = {}) {
   const byDate = new Map()
   for (const e of nutrition) {
-    byDate.set(e.entry_date, (byDate.get(e.entry_date) || 0) + Number(e.kcal || 0))
+    const t = byDate.get(e.entry_date) || { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+    t.kcal += Number(e.kcal || 0)
+    t.protein_g += Number(e.protein_g || 0)
+    t.carbs_g += Number(e.carbs_g || 0)
+    t.fat_g += Number(e.fat_g || 0)
+    byDate.set(e.entry_date, t)
   }
   const today = new Date()
   const out = []
   for (let i = days - 1; i >= 0; i--) {
     const date = addDays(today, -i)
     const iso = toISODate(date)
+    const t = byDate.get(iso) ?? { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
     out.push({
       date: iso,
       label: date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-      kcal: Math.round(byDate.get(iso) ?? 0)
+      kcal: Math.round(t.kcal),
+      protein_g: Math.round(t.protein_g),
+      carbs_g: Math.round(t.carbs_g),
+      fat_g: Math.round(t.fat_g)
     })
   }
   return out

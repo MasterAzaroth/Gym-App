@@ -1,21 +1,35 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { Flame, Trophy, Dumbbell, TrendingUp, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Card, Empty, Spinner, ErrorNote, Button, MacroBar, Segmented } from '../components/ui'
-import { LineChart, BarChart, RankedBars } from '../components/charts'
+import { LineChart, StackedBarChart, RankedBars, RadialGauge } from '../components/charts'
 import { listWorkoutsSince, listSetsSince, listBodyMetrics, listNutritionSince } from '../lib/db'
 import { sumEntries, toISODate } from '../lib/nutrition'
 import {
   daysAgoISO, computeWeekSummary, computeWeightSnapshot, getTodayEntries, getRecentSessions,
-  computeWeeklyVolumeTrend, computeMuscleGroupBreakdown, computeStreak, computeEstimated1RmTrend,
-  computeDailyCalories, computeMacroAverages, computeBodyweightSeries, computeWeightRate
+  computeDailyStreak, computeMuscleGroupWeeklyAvg, rankTrainedExercises, computeStrengthDevelopment,
+  computeDailyMacros, computeMacroAverages, computeBodyweightSeries, computeWeightRate
 } from '../lib/insights'
 
-// App-violet plus two more hues validated for both light and dark surfaces —
-// used only here, for up to 3 simultaneous lift lines. No Tailwind token for
-// the latter two yet (same "hardcoded hex" tradeoff MacroBar already makes
-// for its carb/fat colors), but arbitrary-value + dark: classes still adapt.
+// App-violet plus a few more hues validated for both light and dark surfaces
+// — no Tailwind token for these yet (same "hardcoded hex" tradeoff MacroBar
+// already makes for its carb/fat colors), but arbitrary-value + dark:
+// classes still adapt.
 const LIFT_COLORS = ['text-violet', 'text-[#eb6834] dark:text-[#d95926]', 'text-[#1baf7a] dark:text-[#199e70]']
+
+// One color per ranked row in the muscle-group breakdown — assigned by rank,
+// not by muscle identity, so the highest-volume group always reads first.
+const MUSCLE_COLORS = [
+  'text-violet',
+  'text-[#eb6834] dark:text-[#d95926]',
+  'text-[#1baf7a] dark:text-[#199e70]',
+  'text-[#3b9edb] dark:text-[#2f8bc4]',
+  'text-[#d9498c] dark:text-[#c73f7c]',
+  'text-[#e8a33d] dark:text-[#d4922f]',
+  'text-[#8a63d2] dark:text-[#7952c4]',
+  'text-[#5ec2c2] dark:text-[#4aabab]'
+]
 
 export default function Insights() {
   const { user, profile } = useAuth()
@@ -221,16 +235,27 @@ function OverviewTab({ workouts, metrics, nutrition, profile }) {
 /* ----------------------------------------------------------------- training */
 
 function TrainingTab({ workouts, sets }) {
-  const streak = useMemo(() => computeStreak(workouts), [workouts])
-  const weeklyVolume = useMemo(() => computeWeeklyVolumeTrend(workouts, 8), [workouts])
-  const muscleGroups = useMemo(() => computeMuscleGroupBreakdown(sets, { sinceDays: 28 }), [sets])
-  const oneRm = useMemo(() => computeEstimated1RmTrend(sets, { topN: 3, sinceDays: 90 }), [sets])
+  const streak = useMemo(() => computeDailyStreak(workouts), [workouts])
+  const muscleVolume = useMemo(() => computeMuscleGroupWeeklyAvg(sets, { weeks: 4 }), [sets])
+  const trainedExercises = useMemo(() => rankTrainedExercises(sets), [sets])
+
+  const [selectedExerciseId, setSelectedExerciseId] = useState(null)
+  useEffect(() => {
+    setSelectedExerciseId((current) =>
+      trainedExercises.some((e) => e.id === current) ? current : (trainedExercises[0]?.id ?? null)
+    )
+  }, [trainedExercises])
+
+  const strength = useMemo(
+    () => (selectedExerciseId ? computeStrengthDevelopment(sets, selectedExerciseId) : null),
+    [sets, selectedExerciseId]
+  )
 
   if (workouts.length === 0) {
     return (
       <Empty
         title="No training data yet"
-        body="Log a few sessions and volume, muscle-group, and strength trends show up here."
+        body="Log a few sessions and streaks, muscle volume, and strength trends show up here."
       />
     )
   }
@@ -238,67 +263,71 @@ function TrainingTab({ workouts, sets }) {
   return (
     <>
       <section className="mb-6">
-        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-          Streak
+        <h2 className="mb-2 flex items-center gap-1.5 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+          <Flame size={14} strokeWidth={2.2} /> Streak
         </h2>
         <Card className="grid grid-cols-2 divide-x divide-separator p-0">
-          <Stat value={streak.currentWeeks} label={streak.currentWeeks === 1 ? 'Week running' : 'Weeks running'} />
-          <Stat value={streak.longestWeeks} label="Best streak" />
-        </Card>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-          Weekly volume
-        </h2>
-        <Card className="p-5">
-          <BarChart
-            data={weeklyVolume.map((w) => ({ x: w.label, y: w.volume, sets: w.sets, sessions: w.sessions }))}
-            formatY={(v) => `${(v / 1000).toFixed(1)}t`}
-            colorClassName="text-violet"
-            renderMeta={(d) => `${d.sessions} session${d.sessions === 1 ? '' : 's'} · ${d.sets} sets`}
+          <Stat
+            icon={<Flame size={20} strokeWidth={2} className="text-[#eb6834] dark:text-[#d95926]" />}
+            value={streak.currentDays}
+            label={streak.currentDays === 1 ? 'Day streak' : 'Day streak'}
+          />
+          <Stat
+            icon={<Trophy size={20} strokeWidth={2} className="text-violet" />}
+            value={streak.longestDays}
+            label="Best streak"
           />
         </Card>
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-          Muscle group volume
-        </h2>
+        <div className="mb-2 flex items-baseline justify-between px-1">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+            <Dumbbell size={14} strokeWidth={2.2} /> Weekly muscle volume
+          </h2>
+          <span className="text-[13px] text-label2">Last 4 weeks avg</span>
+        </div>
         <Card className="p-5">
-          {muscleGroups.length === 0 ? (
+          {muscleVolume.length === 0 ? (
             <p className="py-2 text-[15px] leading-relaxed text-label2">
               Nothing logged in the last 4 weeks.
             </p>
           ) : (
-            <>
-              <p className="mb-3 text-[13px] text-label2">Last 4 weeks</p>
-              <RankedBars
-                items={muscleGroups.slice(0, 8)}
-                formatValue={(v) => `${Math.round(v).toLocaleString()} kg`}
-              />
-            </>
+            <RankedBars
+              items={muscleVolume.slice(0, 8).map((m, i) => ({
+                ...m, colorClassName: MUSCLE_COLORS[i % MUSCLE_COLORS.length]
+              }))}
+              formatValue={(v) => `${Math.round(v).toLocaleString()} kg/wk`}
+            />
           )}
         </Card>
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-          Estimated 1RM
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-3 px-1">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+            <TrendingUp size={14} strokeWidth={2.2} /> Strength development
+          </h2>
+          {trainedExercises.length > 0 && (
+            <ExercisePicker
+              value={selectedExerciseId}
+              onChange={setSelectedExerciseId}
+              options={trainedExercises}
+            />
+          )}
+        </div>
         <Card className="p-5">
-          {oneRm.length === 0 ? (
+          {!strength || strength.actual.length === 0 ? (
             <p className="py-2 text-[15px] leading-relaxed text-label2">
               Log the same lift on two different days to see a strength trend.
             </p>
           ) : (
             <LineChart
-              series={oneRm.map((lift, i) => ({
-                id: lift.id,
-                label: lift.label,
-                colorClassName: LIFT_COLORS[i % LIFT_COLORS.length],
-                points: lift.points
-              }))}
+              series={[
+                { id: 'actual', label: 'Actual', colorClassName: 'text-label3', style: 'dots', points: strength.actual },
+                { id: 'average', label: 'Avg', colorClassName: 'text-violet', points: strength.average },
+                { id: 'estimate', label: 'Est. 1RM', colorClassName: LIFT_COLORS[1], points: strength.estimate }
+              ]}
               formatY={(v) => `${Math.round(v)} kg`}
             />
           )}
@@ -308,10 +337,34 @@ function TrainingTab({ workouts, sets }) {
   )
 }
 
+/** A compact select dropdown for choosing which lift the strength-development
+    chart plots — a native <select> rather than a Segmented control since the
+    option list (every exercise with enough history) can run well past what
+    a row of pills can hold. */
+function ExercisePicker({ value, onChange, options }) {
+  return (
+    <div className="relative shrink-0">
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none rounded-lg bg-fill py-1.5 pl-3 pr-7 text-[13px] font-medium text-label focus:outline-none"
+      >
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>{o.name}</option>
+        ))}
+      </select>
+      <ChevronDown
+        size={14} strokeWidth={2}
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-label3"
+      />
+    </div>
+  )
+}
+
 /* ---------------------------------------------------------- nutrition & body */
 
 function NutritionBodyTab({ nutrition, metrics, profile }) {
-  const dailyCalories = useMemo(() => computeDailyCalories(nutrition, { days: 14 }), [nutrition])
+  const dailyMacros = useMemo(() => computeDailyMacros(nutrition, { days: 14 }), [nutrition])
   const macroAverages = useMemo(() => computeMacroAverages(nutrition, { days: 14 }), [nutrition])
   const bodyweight = useMemo(() => computeBodyweightSeries(metrics, { movingAverageDays: 7 }), [metrics])
   const rate = useMemo(() => computeWeightRate(metrics), [metrics])
@@ -335,11 +388,21 @@ function NutritionBodyTab({ nutrition, metrics, profile }) {
     )
   }
 
+  // Same three numbers (macro averages vs goal) feed the linear bars below
+  // and the donut/pie rows further down — three shapes, one dataset, so they
+  // can be compared side by side.
+  const macroItems = [
+    { label: 'Protein', value: macroAverages.protein_g, goal: goals.protein, color: '#6E56CF' },
+    { label: 'Carbs',   value: macroAverages.carbs_g,   goal: goals.carbs,   color: '#3B9EDB' },
+    { label: 'Fat',     value: macroAverages.fat_g,     goal: goals.fat,     color: '#E8A33D' }
+  ]
+  const formatGrams = (v) => `${Math.round(v)}g`
+
   return (
     <>
       <section className="mb-6">
         <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-          Calories
+          Calories &amp; macros
         </h2>
         <Card className="p-5">
           {noNutrition ? (
@@ -347,12 +410,25 @@ function NutritionBodyTab({ nutrition, metrics, profile }) {
               Nothing logged in the last 2 weeks.
             </p>
           ) : (
-            <BarChart
-              data={dailyCalories.map((d) => ({ x: d.label, y: d.kcal }))}
-              goalY={goals.kcal}
-              formatY={(v) => `${Math.round(v)} kcal`}
-              dangerPredicate={(d) => d.y > goals.kcal}
-            />
+            <>
+              <StackedBarChart
+                data={dailyMacros.map((d) => ({
+                  x: d.label,
+                  protein_g: d.protein_g,
+                  carbs_g: d.carbs_g,
+                  fat_g: d.fat_g,
+                  segments: [
+                    { value: d.protein_g * 4, color: '#6E56CF' },
+                    { value: d.carbs_g * 4,   color: '#3B9EDB' },
+                    { value: d.fat_g * 9,     color: '#E8A33D' }
+                  ]
+                }))}
+                goalY={goals.kcal}
+                formatY={(v) => `${Math.round(v)} kcal`}
+                renderMeta={(d) => `P ${d.protein_g}g · C ${d.carbs_g}g · F ${d.fat_g}g`}
+              />
+              <MacroLegend />
+            </>
           )}
         </Card>
       </section>
@@ -378,6 +454,35 @@ function NutritionBodyTab({ nutrition, metrics, profile }) {
           )}
         </Card>
       </section>
+
+      {!noNutrition && (
+        <>
+          <section className="mb-6">
+            <div className="mb-2 flex items-baseline justify-between px-1">
+              <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+                Macro averages, as donuts
+              </h2>
+              <span className="text-[13px] text-label2">Same data, compared</span>
+            </div>
+            <Card className="flex justify-around p-5">
+              {macroItems.map((item) => (
+                <RadialGauge key={item.label} {...item} variant="donut" formatValue={formatGrams} />
+              ))}
+            </Card>
+          </section>
+
+          <section className="mb-6">
+            <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
+              Macro averages, as pies
+            </h2>
+            <Card className="flex justify-around p-5">
+              {macroItems.map((item) => (
+                <RadialGauge key={item.label} {...item} variant="pie" formatValue={formatGrams} />
+              ))}
+            </Card>
+          </section>
+        </>
+      )}
 
       <section className="mb-6">
         <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
@@ -417,11 +522,32 @@ function NutritionBodyTab({ nutrition, metrics, profile }) {
 
 /* --------------------------------------------------------------- shared UI */
 
-function Stat({ value, label }) {
+function Stat({ value, label, icon }) {
   return (
     <div className="px-2 py-5 text-center">
+      {icon && <div className="mb-1.5 flex justify-center">{icon}</div>}
       <p className="text-[26px] font-bold tracking-[-0.02em] tnum">{value}</p>
       <p className="mt-0.5 text-[12px] text-label2">{label}</p>
+    </div>
+  )
+}
+
+/** Color key for the stacked calories/macros chart — a multi-color bar needs
+    a legend the way a single-color one never did. */
+function MacroLegend() {
+  const items = [
+    { label: 'Protein', color: '#6E56CF' },
+    { label: 'Carbs', color: '#3B9EDB' },
+    { label: 'Fat', color: '#E8A33D' }
+  ]
+  return (
+    <div className="mt-3 flex gap-4">
+      {items.map((item) => (
+        <span key={item.label} className="flex items-center gap-1.5 text-[12px] text-label2">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+          {item.label}
+        </span>
+      ))}
     </div>
   )
 }
