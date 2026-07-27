@@ -71,9 +71,13 @@ export function computeWeeklyVolumeTrend(workouts, weeks = 8) {
   return Array.from(buckets.values())
 }
 
-/** Working-set volume grouped by muscle group over the trailing `sinceDays`
-    days, sorted descending. `sets` is the flat listSetsSince array, which may
-    span a wider window than `sinceDays` — this re-filters down to it. */
+/** Working-set count grouped by muscle group over the trailing `sinceDays`
+    days, sorted descending. Counted in sets rather than tonnage (weight ×
+    reps) — a heavy compound lift otherwise dwarfs everything else and the
+    number stops reflecting how much a muscle group is actually being
+    trained. Warm-up sets don't count toward the total. `sets` is the flat
+    listSetsSince array, which may span a wider window than `sinceDays` —
+    this re-filters down to it. */
 export function computeMuscleGroupBreakdown(sets, { sinceDays = 28 } = {}) {
   const cutoff = addDays(new Date(), -sinceDays)
   const totals = new Map()
@@ -82,21 +86,22 @@ export function computeMuscleGroupBreakdown(sets, { sinceDays = 28 } = {}) {
     const started = s.workout?.started_at
     if (!started || new Date(started) < cutoff) continue
     const label = s.exercise?.muscle_group || 'Other'
-    const volume = (Number(s.weight_kg) || 0) * (Number(s.reps) || 0)
-    totals.set(label, (totals.get(label) || 0) + volume)
+    totals.set(label, (totals.get(label) || 0) + 1)
   }
-  return Array.from(totals, ([label, value]) => ({ label, value: Math.round(value) }))
+  return Array.from(totals, ([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
 }
 
 /** Same breakdown as computeMuscleGroupBreakdown, expressed as an average
     per week rather than a raw total — replaces separately showing "total
-    volume over 4 weeks" and "total volume this week" with the one number
-    that answers both: how much of each muscle you're training per week,
-    on average, right now. */
+    sets over 4 weeks" and "total sets this week" with the one number that
+    answers both: how many working sets of each muscle you're doing per
+    week, on average, right now. Kept to one decimal rather than rounded to
+    a whole set, since a 4-week average of small set counts loses too much
+    precision otherwise (14 sets over 4 weeks is 3.5/wk, not 4). */
 export function computeMuscleGroupWeeklyAvg(sets, { weeks = 4 } = {}) {
   return computeMuscleGroupBreakdown(sets, { sinceDays: weeks * 7 })
-    .map((t) => ({ ...t, value: Math.round(t.value / weeks) }))
+    .map((t) => ({ ...t, value: Math.round((t.value / weeks) * 10) / 10 }))
 }
 
 // muscle_group is free text (users can add custom exercises with any label),

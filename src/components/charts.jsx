@@ -153,18 +153,29 @@ export function LineChart({ series, height = 120, goalY, formatY = formatDefault
   )
 }
 
+// Bars sit centered in an even slot per category rather than filling it edge
+// to edge — capped absolute width so two or three categories (e.g. an
+// upper-vs-lower comparison) still read as slim capsules, not a couple of
+// fat blocks. rx = barWidth / 2 rounds all four corners into a full capsule,
+// matching the pill shape MacroBar/RadialGauge already use elsewhere.
+function barGeometry(n) {
+  const slot = WIDTH / n
+  const width = Math.min(slot * 0.56, 30)
+  return { slot, width, x: (i) => i * slot + (slot - width) / 2 }
+}
+
 /**
- * A vertical bar chart. `data` is `[{ x: string, y: number, colorClassName? }]`
- * — `x` is the label shown in the readout and isn't otherwise drawn (no axis
- * labels under every bar; that many labels on a phone width just becomes
- * noise). Each item may carry its own `colorClassName`, falling back to the
- * shared prop — same per-row color override as `RankedBars`, used when bars
- * represent distinct categories (e.g. upper vs lower body) rather than one
- * series over time.
+ * A vertical bar chart. `data` is `[{ x: string, y: number, colorClassName? }]`.
+ * `x` doubles as the always-visible label under each bar and the readout
+ * above the chart. Tapping (or dragging across) a bar selects it and the
+ * selection sticks — it doesn't snap back on release, so the readout keeps
+ * showing what was tapped. Each item may carry its own `colorClassName`,
+ * falling back to the shared prop — used when bars represent distinct
+ * categories (e.g. upper vs lower body) rather than one series over time.
  */
 export function BarChart({
   data, height = 120, goalY, formatY = formatDefault, colorClassName = 'text-violet',
-  dangerPredicate, renderMeta
+  dangerPredicate, renderMeta, showLabels = true
 }) {
   const svgRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(null)
@@ -184,12 +195,12 @@ export function BarChart({
   const baseline = toY(scale.yMin)
 
   const n = data.length
-  const gap = 2
-  const barWidth = (WIDTH - gap * (n - 1)) / n
+  const { width: barWidth, x: barX } = barGeometry(n)
 
   const index = activeIndex ?? n - 1
   const active = data[index]
   const activeDanger = dangerPredicate?.(active)
+  const activeColor = activeDanger ? 'text-danger' : (active.colorClassName ?? colorClassName)
 
   const handlePointer = (e) => {
     const rect = svgRef.current.getBoundingClientRect()
@@ -201,7 +212,7 @@ export function BarChart({
     <div>
       <div className="mb-2 flex items-baseline gap-3">
         <span className="text-[13px] text-label2">{active.x}</span>
-        <span className={`text-[15px] font-semibold tnum ${activeDanger ? 'text-danger' : (active.colorClassName ?? colorClassName)}`}>
+        <span className={`text-[15px] font-semibold tnum ${activeColor}`}>
           {formatY(active.y)}
         </span>
         {renderMeta && <span className="text-[13px] text-label2">{renderMeta(active)}</span>}
@@ -214,8 +225,6 @@ export function BarChart({
         preserveAspectRatio="none"
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); handlePointer(e) }}
         onPointerMove={handlePointer}
-        onPointerUp={(e) => { if (e.pointerType !== 'mouse') setActiveIndex(null) }}
-        onPointerLeave={() => setActiveIndex(null)}
         aria-hidden="true"
       >
         {goalY != null && (
@@ -231,18 +240,35 @@ export function BarChart({
           return (
             <rect
               key={i}
-              x={i * (barWidth + gap)}
+              x={barX(i)}
               y={Math.min(top, baseline)}
               width={barWidth}
-              height={Math.abs(baseline - top)}
-              rx="2"
+              height={Math.max(Math.abs(baseline - top), 0.01)}
+              rx={barWidth / 2}
               fill="currentColor"
               className={isDanger ? 'text-danger' : (d.colorClassName ?? colorClassName)}
-              opacity={i === index ? 1 : 0.55}
+              opacity={i === index ? 1 : 0.85}
             />
           )
         })}
       </svg>
+
+      {showLabels && (
+        <div className="mt-1.5 flex">
+          {data.map((d, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActiveIndex(i)}
+              className={`flex-1 truncate px-0.5 text-center text-[11px] font-medium ${
+                i === index ? (d.colorClassName ?? colorClassName) : 'text-label3'
+              }`}
+            >
+              {d.x}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -276,8 +302,7 @@ export function StackedBarChart({ data, height = 140, goalY, formatY = formatDef
   const baseline = toY(scale.yMin)
 
   const n = data.length
-  const gap = 2
-  const barWidth = (WIDTH - gap * (n - 1)) / n
+  const { width: barWidth, x: barX } = barGeometry(n)
 
   const index = activeIndex ?? n - 1
   const active = data[index]
@@ -303,8 +328,6 @@ export function StackedBarChart({ data, height = 140, goalY, formatY = formatDef
         preserveAspectRatio="none"
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); handlePointer(e) }}
         onPointerMove={handlePointer}
-        onPointerUp={(e) => { if (e.pointerType !== 'mouse') setActiveIndex(null) }}
-        onPointerLeave={() => setActiveIndex(null)}
         aria-hidden="true"
       >
         {goalY != null && (
@@ -316,16 +339,16 @@ export function StackedBarChart({ data, height = 140, goalY, formatY = formatDef
         )}
         {data.map((d, i) => {
           const total = totals[i]
-          const x = i * (barWidth + gap)
+          const x = barX(i)
           const top = toY(total)
           const barTop = Math.min(top, baseline)
           const barHeight = Math.max(Math.abs(baseline - top), 0.01)
           const clipId = `${uid}-bar-${i}`
           let cursor = scale.yMin
           return (
-            <g key={i} opacity={i === index ? 1 : 0.55}>
+            <g key={i} opacity={i === index ? 1 : 0.85}>
               <clipPath id={clipId}>
-                <rect x={x} y={barTop} width={barWidth} height={barHeight} rx="2" />
+                <rect x={x} y={barTop} width={barWidth} height={barHeight} rx={barWidth / 2} />
               </clipPath>
               <g clipPath={`url(#${clipId})`}>
                 {d.segments.map((seg, j) => {

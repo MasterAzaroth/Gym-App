@@ -331,7 +331,7 @@ function TrainingTab({ workouts, sets }) {
                       ? (i === 0 ? 'text-violet' : MUSCLE_COLORS[1])
                       : MUSCLE_COLORS[i % MUSCLE_COLORS.length]
                   }))}
-                  formatY={(v) => `${Math.round(v).toLocaleString()} kg/wk`}
+                  formatY={(v) => `${Number.isInteger(v) ? v : v.toFixed(1)} sets/wk`}
                 />
               )}
             </>
