@@ -19,7 +19,20 @@ import { createClient } from '@supabase/supabase-js'
 
 loadEnvLocal()
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+// Supabase wants the bare project origin — https://xxxx.supabase.co — and
+// appends its own paths (/auth/v1/..., /rest/v1/...). Mirrors the same
+// normalization src/lib/supabase.js does for the browser client.
+function toOrigin(value) {
+  const raw = (value ?? '').trim()
+  if (!raw) return ''
+  try {
+    return new URL(raw).origin
+  } catch {
+    return raw.replace(/\/+$/, '')
+  }
+}
+
+const SUPABASE_URL = toOrigin(process.env.VITE_SUPABASE_URL)
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
 const EMAIL = process.env.SEED_EMAIL
 const PASSWORD = process.env.SEED_PASSWORD
