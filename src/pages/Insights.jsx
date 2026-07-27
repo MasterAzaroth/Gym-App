@@ -446,43 +446,14 @@ function NutritionBodyTab({ nutrition, metrics, profile }) {
               Nothing logged in the last 2 weeks.
             </p>
           ) : (
-            <div className="space-y-3.5">
-              <MacroBar label="Protein" value={macroAverages.protein_g} goal={goals.protein} color="#6E56CF" />
-              <MacroBar label="Carbs"   value={macroAverages.carbs_g}   goal={goals.carbs}   color="#3B9EDB" />
-              <MacroBar label="Fat"     value={macroAverages.fat_g}     goal={goals.fat}     color="#E8A33D" />
+            <div className="flex justify-around">
+              {macroItems.map((item) => (
+                <RadialGauge key={item.label} {...item} formatValue={formatGrams} />
+              ))}
             </div>
           )}
         </Card>
       </section>
-
-      {!noNutrition && (
-        <>
-          <section className="mb-6">
-            <div className="mb-2 flex items-baseline justify-between px-1">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-                Macro averages, as donuts
-              </h2>
-              <span className="text-[13px] text-label2">Same data, compared</span>
-            </div>
-            <Card className="flex justify-around p-5">
-              {macroItems.map((item) => (
-                <RadialGauge key={item.label} {...item} variant="donut" formatValue={formatGrams} />
-              ))}
-            </Card>
-          </section>
-
-          <section className="mb-6">
-            <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">
-              Macro averages, as pies
-            </h2>
-            <Card className="flex justify-around p-5">
-              {macroItems.map((item) => (
-                <RadialGauge key={item.label} {...item} variant="pie" formatValue={formatGrams} />
-              ))}
-            </Card>
-          </section>
-        </>
-      )}
 
       <section className="mb-6">
         <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.04em] text-label2">

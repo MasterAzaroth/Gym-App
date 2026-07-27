@@ -382,34 +382,41 @@ export function RankedBars({ items, colorClassName = 'text-violet', formatValue 
 
 /**
  * A circular progress indicator built from a CSS conic-gradient — no SVG arc
- * math to get wrong. `variant: 'donut'` cuts a hole (matching the card's own
- * background) with the value centered inside it; `'pie'` fills the whole
- * disc, so the value sits underneath as a caption instead. Same data as a
- * MacroBar, just as a radial shape instead of a linear one.
+ * math to get wrong. Cuts a donut hole (matching the card's own background)
+ * with the value centered inside it. Same data as a MacroBar, just as a
+ * radial shape instead of a linear one.
  */
-export function RadialGauge({ value, goal, color, label, variant = 'donut', size = 84, formatValue = formatDefault }) {
-  const pct = goal > 0 ? Math.min(value / goal, 1) : 0
+export function RadialGauge({ value, goal, color, label, size = 84, formatValue = formatDefault }) {
+  const rawPct = goal > 0 ? value / goal : 0
+  const pct = Math.min(rawPct, 1)
   const angle = pct * 360
-  const thickness = variant === 'donut' ? size * 0.17 : size / 2
+  const thickness = size * 0.17
+
+  // Past 100%, the gauge has lapped itself — redraw the overshot portion
+  // from the top in a darker shade of the same color so a second lap over
+  // the first reads as "over goal" rather than looking identical to 100%.
+  const overshootPct = Math.min(Math.max(rawPct - 1, 0), 1)
+  const overshootAngle = overshootPct * 360
+  const overshootColor = `color-mix(in srgb, ${color} 65%, black)`
+
   const background =
     angle <= 0
       ? 'rgb(var(--color-separator))'
-      : `conic-gradient(${color} ${angle}deg, rgb(var(--color-separator)) ${angle}deg 360deg)`
+      : overshootAngle > 0
+        ? `conic-gradient(${overshootColor} ${overshootAngle}deg, ${color} ${overshootAngle}deg 360deg)`
+        : `conic-gradient(${color} ${angle}deg, rgb(var(--color-separator)) ${angle}deg 360deg)`
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative rounded-full" style={{ width: size, height: size, background }}>
-        {variant === 'donut' && (
-          <div
-            className="absolute flex items-center justify-center rounded-full bg-surface"
-            style={{ inset: thickness }}
-          >
-            <span className="text-[13px] font-semibold tnum">{formatValue(value)}</span>
-          </div>
-        )}
+        <div
+          className="absolute flex items-center justify-center rounded-full bg-surface"
+          style={{ inset: thickness }}
+        >
+          <span className="text-[13px] font-semibold tnum">{formatValue(value)}</span>
+        </div>
       </div>
       <div className="text-center">
-        {variant === 'pie' && <p className="text-[13px] font-semibold tnum">{formatValue(value)}</p>}
         <p className="text-[11px] text-label2">{label}</p>
       </div>
     </div>
