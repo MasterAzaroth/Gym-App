@@ -157,6 +157,21 @@ export async function removeRoutineExercise(id) {
 }
 
 /* ----------------------------------------------------------------- workouts */
+/** Derives set_count/volume_kg/minutes from a workout row's embedded sets.
+    Shared by listWorkouts and listWorkoutsSince so the math lives once. */
+function withWorkoutStats(rows) {
+  return (rows ?? []).map((w) => {
+    const working = (w.sets ?? []).filter((s) => !s.is_warmup)
+    const volume = working.reduce(
+      (sum, s) => sum + (Number(s.weight_kg) || 0) * (Number(s.reps) || 0), 0
+    )
+    const minutes = w.finished_at
+      ? Math.round((new Date(w.finished_at) - new Date(w.started_at)) / 60000)
+      : null
+    return { ...w, set_count: working.length, volume_kg: Math.round(volume), minutes }
+  })
+}
+
 export async function listWorkouts(userId, limit = 50) {
   guard()
   const { data, error } = await supabase
@@ -167,17 +182,43 @@ export async function listWorkouts(userId, limit = 50) {
     .order('started_at', { ascending: false })
     .limit(limit)
   if (error) throw error
+  return withWorkoutStats(data)
+}
 
-  return (data ?? []).map((w) => {
-    const working = (w.sets ?? []).filter((s) => !s.is_warmup)
-    const volume = working.reduce(
-      (sum, s) => sum + (Number(s.weight_kg) || 0) * (Number(s.reps) || 0), 0
-    )
-    const minutes = w.finished_at
-      ? Math.round((new Date(w.finished_at) - new Date(w.started_at)) / 60000)
-      : null
-    return { ...w, set_count: working.length, volume_kg: Math.round(volume), minutes }
-  })
+/** Same shape as listWorkouts but bounded by a date window instead of a row
+    count — for insights dashboards that need "everything in the last N days"
+    rather than "the last N sessions". */
+export async function listWorkoutsSince(userId, sinceISODate) {
+  guard()
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('*, sets(id, weight_kg, reps, is_warmup)')
+    .eq('user_id', userId)
+    .not('finished_at', 'is', null)
+    .gte('started_at', sinceISODate)
+    .order('started_at', { ascending: false })
+  if (error) throw error
+  return withWorkoutStats(data)
+}
+
+/** Flat working+warmup sets over a date window, each carrying its exercise's
+    name/muscle_group — listWorkouts's embedded sets don't carry exercise_id,
+    so muscle-group and per-lift breakdowns need this instead. */
+export async function listSetsSince(userId, sinceISODate) {
+  guard()
+  const { data, error } = await supabase
+    .from('sets')
+    .select(`
+      id, weight_kg, reps, is_warmup, created_at,
+      workout:workouts!inner(id, started_at, finished_at, user_id),
+      exercise:exercises(id, name, muscle_group)
+    `)
+    .eq('workout.user_id', userId)
+    .not('workout.finished_at', 'is', null)
+    .gte('workout.started_at', sinceISODate)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data ?? []
 }
 
 export async function getWorkout(workoutId) {
@@ -298,6 +339,20 @@ export async function listNutrition(userId, isoDate) {
     .eq('user_id', userId)
     .eq('entry_date', isoDate)
     .order('logged_time')
+  if (error) throw error
+  return data ?? []
+}
+
+/** Flat entries over a date window, ascending — for trends across many days
+    rather than a single day's log. */
+export async function listNutritionSince(userId, sinceISODate) {
+  guard()
+  const { data, error } = await supabase
+    .from('nutrition_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('entry_date', sinceISODate)
+    .order('entry_date', { ascending: true })
   if (error) throw error
   return data ?? []
 }
