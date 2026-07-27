@@ -154,9 +154,13 @@ export function LineChart({ series, height = 120, goalY, formatY = formatDefault
 }
 
 /**
- * A vertical bar chart. `data` is `[{ x: string, y: number }]` — `x` is the
- * label shown in the readout and isn't otherwise drawn (no axis labels under
- * every bar; that many labels on a phone width just becomes noise).
+ * A vertical bar chart. `data` is `[{ x: string, y: number, colorClassName? }]`
+ * — `x` is the label shown in the readout and isn't otherwise drawn (no axis
+ * labels under every bar; that many labels on a phone width just becomes
+ * noise). Each item may carry its own `colorClassName`, falling back to the
+ * shared prop — same per-row color override as `RankedBars`, used when bars
+ * represent distinct categories (e.g. upper vs lower body) rather than one
+ * series over time.
  */
 export function BarChart({
   data, height = 120, goalY, formatY = formatDefault, colorClassName = 'text-violet',
@@ -197,7 +201,7 @@ export function BarChart({
     <div>
       <div className="mb-2 flex items-baseline gap-3">
         <span className="text-[13px] text-label2">{active.x}</span>
-        <span className={`text-[15px] font-semibold tnum ${activeDanger ? 'text-danger' : colorClassName}`}>
+        <span className={`text-[15px] font-semibold tnum ${activeDanger ? 'text-danger' : (active.colorClassName ?? colorClassName)}`}>
           {formatY(active.y)}
         </span>
         {renderMeta && <span className="text-[13px] text-label2">{renderMeta(active)}</span>}
@@ -233,7 +237,7 @@ export function BarChart({
               height={Math.abs(baseline - top)}
               rx="2"
               fill="currentColor"
-              className={isDanger ? 'text-danger' : colorClassName}
+              className={isDanger ? 'text-danger' : (d.colorClassName ?? colorClassName)}
               opacity={i === index ? 1 : 0.55}
             />
           )
@@ -344,38 +348,6 @@ export function StackedBarChart({ data, height = 140, goalY, formatY = formatDef
           )
         })}
       </svg>
-    </div>
-  )
-}
-
-/**
- * A ranked horizontal-bar list — div/width% bars like `MacroBar`, not SVG,
- * since this is a sorted list rather than a coordinate-plane chart. The row
- * label carries identity, so no separate legend is needed even with several
- * rows. Caller is expected to pre-sort `items` descending. Each item may
- * carry its own `colorClassName`, falling back to the shared prop — used to
- * give a multi-row breakdown (e.g. one row per muscle group) distinct colors
- * instead of one flat color repeated down the list.
- */
-export function RankedBars({ items, colorClassName = 'text-violet', formatValue = formatDefault }) {
-  if (!items.length) return null
-  const max = Math.max(...items.map((i) => i.value)) || 1
-  return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <div key={item.label}>
-          <div className="mb-1 flex items-baseline justify-between">
-            <span className="text-[13px] font-medium text-label2">{item.label}</span>
-            <span className="text-[13px] font-semibold tnum">{formatValue(item.value)}</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-separator">
-            <div
-              className={`h-full rounded-full ${item.colorClassName ?? colorClassName}`}
-              style={{ width: `${(item.value / max) * 100}%`, backgroundColor: 'currentColor' }}
-            />
-          </div>
-        </div>
-      ))}
     </div>
   )
 }

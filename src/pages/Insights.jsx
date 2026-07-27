@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom'
 import { Flame, Trophy, Dumbbell, TrendingUp, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Card, Empty, Spinner, ErrorNote, Button, MacroBar, Segmented } from '../components/ui'
-import { LineChart, StackedBarChart, RankedBars, RadialGauge } from '../components/charts'
+import { LineChart, StackedBarChart, BarChart, RadialGauge } from '../components/charts'
 import { listWorkoutsSince, listSetsSince, listBodyMetrics, listNutritionSince } from '../lib/db'
 import { sumEntries, toISODate } from '../lib/nutrition'
 import {
   daysAgoISO, computeWeekSummary, computeWeightSnapshot, getTodayEntries, getRecentSessions,
-  computeDailyStreak, computeMuscleGroupWeeklyAvg, rankTrainedExercises, computeStrengthDevelopment,
+  computeDailyStreak, computeMuscleGroupWeeklyAvg, classifyBodyRegion, rankTrainedExercises, computeStrengthDevelopment,
   computeDailyMacros, computeMacroAverages, computeBodyweightSeries, computeWeightRate
 } from '../lib/insights'
 
@@ -239,6 +239,21 @@ function TrainingTab({ workouts, sets }) {
   const muscleVolume = useMemo(() => computeMuscleGroupWeeklyAvg(sets, { weeks: 4 }), [sets])
   const trainedExercises = useMemo(() => rankTrainedExercises(sets), [sets])
 
+  const [muscleView, setMuscleView] = useState('upper')
+  const muscleByRegion = useMemo(() => {
+    const upper = muscleVolume.filter((m) => classifyBodyRegion(m.label) === 'upper').slice(0, 8)
+    const lower = muscleVolume.filter((m) => classifyBodyRegion(m.label) === 'lower').slice(0, 8)
+    const compare = [
+      { label: 'Upper body', value: upper.reduce((sum, m) => sum + m.value, 0) },
+      { label: 'Lower body', value: lower.reduce((sum, m) => sum + m.value, 0) }
+    ]
+    return { upper, lower, compare }
+  }, [muscleVolume])
+  const activeMuscleItems = muscleByRegion[muscleView]
+  const noMuscleData = muscleView === 'compare'
+    ? activeMuscleItems.every((m) => m.value === 0)
+    : activeMuscleItems.length === 0
+
   const [selectedExerciseId, setSelectedExerciseId] = useState(null)
   useEffect(() => {
     setSelectedExerciseId((current) =>
@@ -293,12 +308,33 @@ function TrainingTab({ workouts, sets }) {
               Nothing logged in the last 4 weeks.
             </p>
           ) : (
-            <RankedBars
-              items={muscleVolume.slice(0, 8).map((m, i) => ({
-                ...m, colorClassName: MUSCLE_COLORS[i % MUSCLE_COLORS.length]
-              }))}
-              formatValue={(v) => `${Math.round(v).toLocaleString()} kg/wk`}
-            />
+            <>
+              <Segmented
+                value={muscleView}
+                onChange={setMuscleView}
+                options={[
+                  { value: 'upper', label: 'Upper' },
+                  { value: 'lower', label: 'Lower' },
+                  { value: 'compare', label: 'Upper vs lower' }
+                ]}
+              />
+              {noMuscleData ? (
+                <p className="py-2 text-[15px] leading-relaxed text-label2">
+                  Nothing logged for this split in the last 4 weeks.
+                </p>
+              ) : (
+                <BarChart
+                  data={activeMuscleItems.map((m, i) => ({
+                    x: m.label,
+                    y: m.value,
+                    colorClassName: muscleView === 'compare'
+                      ? (i === 0 ? 'text-violet' : MUSCLE_COLORS[1])
+                      : MUSCLE_COLORS[i % MUSCLE_COLORS.length]
+                  }))}
+                  formatY={(v) => `${Math.round(v).toLocaleString()} kg/wk`}
+                />
+              )}
+            </>
           )}
         </Card>
       </section>

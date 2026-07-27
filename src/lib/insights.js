@@ -99,6 +99,26 @@ export function computeMuscleGroupWeeklyAvg(sets, { weeks = 4 } = {}) {
     .map((t) => ({ ...t, value: Math.round(t.value / weeks) }))
 }
 
+// muscle_group is free text (users can add custom exercises with any label),
+// so this is a best-effort classification of the labels this app ships with
+// rather than an exhaustive enum. Unrecognized labels fall into 'other'.
+const UPPER_BODY_GROUPS = new Set([
+  'chest', 'back', 'lats', 'shoulders', 'rear delts', 'biceps', 'triceps', 'forearms', 'abs', 'core', 'traps'
+])
+const LOWER_BODY_GROUPS = new Set([
+  'quads', 'hamstrings', 'glutes', 'calves', 'legs', 'posterior', 'adductors', 'abductors'
+])
+
+/** Classifies a muscle_group label as 'upper', 'lower', or 'other'
+    (case-insensitive) — powers the upper/lower/comparison views of the
+    weekly muscle volume chart. */
+export function classifyBodyRegion(label) {
+  const key = (label || '').trim().toLowerCase()
+  if (UPPER_BODY_GROUPS.has(key)) return 'upper'
+  if (LOWER_BODY_GROUPS.has(key)) return 'lower'
+  return 'other'
+}
+
 /** Consecutive calendar days containing at least one finished workout.
     `currentDays` counts back from today, but treats today as "not yet
     broken" if it has no session yet — only a fully missed day ends the
